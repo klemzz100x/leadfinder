@@ -79,12 +79,25 @@ export default function LeadRow({ lead, onUpdate }) {
             <span className="score-value">{lead.score.toFixed(2)}</span>
           </div>
 
-          <span className="lead-phone">
-            {lead.phone
-              ? <a href={`tel:${lead.phone}`}>📞 {lead.phone}</a>
-              : <span className="no-phone">Pas de tél.</span>
-            }
-          </span>
+          <div className="lead-contact">
+            <span className="lead-phone">
+              {lead.phone
+                ? <a href={`tel:${lead.phone}`}>📞 {lead.phone}</a>
+                : <span className="no-phone">Pas de tél.</span>
+              }
+            </span>
+            {lead.website && (
+              <a
+                className="lead-website"
+                href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                target="_blank"
+                rel="noreferrer"
+                title={lead.website}
+              >
+                🌐 {new URL(lead.website.startsWith('http') ? lead.website : `https://${lead.website}`).hostname.replace(/^www\./, '')}
+              </a>
+            )}
+          </div>
         </div>
 
         {/* Colonne 3 / Ligne 2 : actions */}
