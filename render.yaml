@@ -1,0 +1,29 @@
+# Render Blueprint — LeadFinder
+# Doc : https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: leadfinder
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Le port est injecté automatiquement par Render via $PORT.
+    # Le CMD du Dockerfile utilise le port 8000 ; Render redirige son $PORT vers 8000.
+    plan: free                  # Tier gratuit — passer à "starter" pour le disk
+    envVars:
+      - key: SQLITE_PATH
+        value: /data/leadfinder.db
+      # Clés API optionnelles — à ajouter dans le dashboard Render si besoin :
+      # - key: PSI_API_KEY
+      #   sync: false
+      # - key: GOOGLE_PLACES_API_KEY
+      #   sync: false
+      # - key: BRAVE_API_KEY
+      #   sync: false
+
+    # ⚠️  Le disk nécessite le plan payant "Starter" ($7/mois).
+    # Sans disk, la base SQLite est perdue à chaque redéploiement.
+    # Pour activer, décommenter le bloc ci-dessous ET changer plan: starter.
+    # disk:
+    #   name: leadfinder-data
+    #   mountPath: /data
+    #   sizeGB: 1
