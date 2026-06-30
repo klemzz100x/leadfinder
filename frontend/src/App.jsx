@@ -1,11 +1,15 @@
-import { useState, useCallback } from 'react'
-import { scanCity, fetchLeads, fetchMeta, exportCsvUrl, fetchCategories } from './api.js'
+import { useState, useCallback, useEffect } from 'react'
+import {
+  scanCity, fetchLeads, fetchMeta, exportCsvUrl,
+  fetchCategories, fetchLists,
+} from './api.js'
 import SearchBar from './components/SearchBar.jsx'
 import StatsBar from './components/StatsBar.jsx'
 import FilterBar from './components/FilterBar.jsx'
 import LeadList from './components/LeadList.jsx'
 import CategoryView from './components/CategoryView.jsx'
 import CategoryEditor from './components/CategoryEditor.jsx'
+import ListsView from './components/ListsView.jsx'
 
 export default function App() {
   const [city, setCity]         = useState('')
@@ -16,11 +20,20 @@ export default function App() {
   const [filter, setFilter]     = useState({ temperature: '', type: '' })
   const [error, setError]       = useState('')
 
-  // Vue : 'list' | 'categories'
-  const [viewMode, setViewMode]             = useState('list')
-  const [categories, setCategories]         = useState({})
+  const [viewMode, setViewMode]                 = useState('list')
+  const [categories, setCategories]             = useState({})
   const [categoriesLoaded, setCategoriesLoaded] = useState(false)
   const [categoryEditorOpen, setCategoryEditorOpen] = useState(false)
+
+  // Onglet principal
+  const [tab, setTab] = useState('search')
+
+  // Listes partagées
+  const [lists, setLists] = useState([])
+
+  useEffect(() => {
+    fetchLists().then(setLists)
+  }, [])
 
   const loadLeads = useCallback(async (c, f = filter) => {
     const data = await fetchLeads({ city: c, ...f })
@@ -74,104 +87,117 @@ export default function App() {
     setCategoryEditorOpen(true)
   }
 
-  const handleCategoriesSaved = (newCats) => {
-    setCategories(newCats)
-  }
-
   return (
     <div className="app">
       <header className="app-header">
-        <div className="header-brand">
-          <div className="header-logo">🎯</div>
-          <h1>
-            <span className="header-title">LeadFinder</span>
-            <span className="header-sub">Business sans site web</span>
-          </h1>
+        <div className="header-top">
+          <div className="header-brand">
+            <div className="header-logo">🎯</div>
+            <h1>
+              <span className="header-title">LeadFinder</span>
+              <span className="header-sub">Business sans site web</span>
+            </h1>
+          </div>
+          <nav className="main-tabs">
+            <button
+              className={`main-tab${tab === 'search' ? ' active' : ''}`}
+              onClick={() => setTab('search')}
+            >
+              🔍 Recherche
+            </button>
+            <button
+              className={`main-tab${tab === 'lists' ? ' active' : ''}`}
+              onClick={() => setTab('lists')}
+            >
+              📋 Mes Listes
+              {lists.length > 0 && <span className="tab-badge">{lists.length}</span>}
+            </button>
+          </nav>
         </div>
-        <SearchBar
-          city={city}
-          onChange={setCity}
-          onScan={handleScan}
-          scanning={scanning}
-        />
+
+        {tab === 'search' && (
+          <SearchBar
+            city={city}
+            onChange={setCity}
+            onScan={handleScan}
+            scanning={scanning}
+          />
+        )}
         {error && <p className="error">{error}</p>}
       </header>
 
-      {summary && (
+      {tab === 'search' && (
         <>
-          <StatsBar summary={summary} />
+          {summary && (
+            <>
+              <StatsBar summary={summary} />
+              <div className="toolbar">
+                <FilterBar filter={filter} types={types} onChange={handleFilterChange} />
+                <div className="toolbar-divider" />
+                <div className="view-toggle">
+                  <button
+                    className={`btn btn-view-toggle${viewMode === 'list' ? ' active' : ''}`}
+                    onClick={() => handleViewMode('list')}
+                  >
+                    ≡ Liste
+                  </button>
+                  <button
+                    className={`btn btn-view-toggle${viewMode === 'categories' ? ' active' : ''}`}
+                    onClick={() => handleViewMode('categories')}
+                  >
+                    ⊞ Catégories
+                  </button>
+                </div>
+                <button className="btn btn-cat-editor" onClick={handleOpenEditor}>
+                  ⚙ Catégories
+                </button>
+                <div className="toolbar-divider" />
+                <a className="btn btn-export" href={exportCsvUrl(city.trim())} download>
+                  ↓ CSV
+                </a>
+              </div>
+            </>
+          )}
 
-          <div className="toolbar">
-            <FilterBar
-              filter={filter}
-              types={types}
-              onChange={handleFilterChange}
-            />
+          <main>
+            {leads.length === 0 && summary && !scanning && (
+              <p className="empty">Aucun lead pour ces filtres.</p>
+            )}
+            {viewMode === 'list' && (
+              <LeadList
+                leads={leads}
+                onUpdate={handleLeadUpdate}
+                lists={lists}
+                onListsChange={setLists}
+              />
+            )}
+            {viewMode === 'categories' && leads.length > 0 && (
+              <CategoryView
+                leads={leads}
+                categories={categories}
+                onUpdate={handleLeadUpdate}
+              />
+            )}
+          </main>
 
-            <div className="toolbar-divider" />
-
-            {/* Toggle Vue liste / Vue catégories */}
-            <div className="view-toggle">
-              <button
-                className={`btn btn-view-toggle${viewMode === 'list' ? ' active' : ''}`}
-                onClick={() => handleViewMode('list')}
-                title="Vue liste"
-              >
-                ≡ Liste
-              </button>
-              <button
-                className={`btn btn-view-toggle${viewMode === 'categories' ? ' active' : ''}`}
-                onClick={() => handleViewMode('categories')}
-                title="Vue catégories"
-              >
-                ⊞ Catégories
-              </button>
-            </div>
-
-            {/* Bouton éditeur de catégories */}
-            <button className="btn btn-cat-editor" onClick={handleOpenEditor} title="Éditer les catégories">
-              ⚙ Catégories
-            </button>
-
-            <div className="toolbar-divider" />
-
-            <a className="btn btn-export" href={exportCsvUrl(city.trim())} download>
-              ↓ CSV
-            </a>
-          </div>
+          <footer className="app-footer">
+            {summary
+              ? `Appels API : ${summary.api_calls} | Scan en ${summary.duration_seconds}s | 0 € garanti`
+              : 'Aucun scan — 0 appel API | 0 € garanti'}
+          </footer>
         </>
       )}
 
-      <main>
-        {leads.length === 0 && summary && !scanning && (
-          <p className="empty">Aucun lead pour ces filtres.</p>
-        )}
-
-        {viewMode === 'list' && (
-          <LeadList leads={leads} onUpdate={handleLeadUpdate} />
-        )}
-
-        {viewMode === 'categories' && leads.length > 0 && (
-          <CategoryView
-            leads={leads}
-            categories={categories}
-            onUpdate={handleLeadUpdate}
-          />
-        )}
-      </main>
-
-      <footer className="app-footer">
-        {summary
-          ? `Appels API : ${summary.api_calls} | Scan en ${summary.duration_seconds}s | 0 € garanti`
-          : 'Aucun scan — 0 appel API | 0 € garanti'}
-      </footer>
+      {tab === 'lists' && (
+        <ListsView lists={lists} onListsChange={setLists} />
+      )}
 
       {categoryEditorOpen && (
         <CategoryEditor
           categories={categories}
           types={types}
           onClose={() => setCategoryEditorOpen(false)}
-          onSave={handleCategoriesSaved}
+          onSave={setCategories}
         />
       )}
     </div>

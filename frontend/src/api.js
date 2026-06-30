@@ -64,3 +64,65 @@ export async function saveCategories(categories) {
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }
+
+export async function fetchLists() {
+  const res = await fetch(`${BASE}/lists`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function createList(name) {
+  const res = await fetch(`${BASE}/lists`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function deleteList(id) {
+  const res = await fetch(`${BASE}/lists/${encodeURIComponent(id)}`, { method: 'DELETE' })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function fetchListLeads(listId) {
+  const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/leads`)
+  if (!res.ok) return []
+  return res.json()
+}
+
+export async function fetchListStats(listId) {
+  const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/stats`)
+  if (!res.ok) return null
+  return res.json()
+}
+
+export async function addLeadsToList(listId, leadIds) {
+  const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/leads`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lead_ids: leadIds }),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function removeLeadFromList(listId, leadId) {
+  const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/leads/${encodeURIComponent(leadId)}`, {
+    method: 'DELETE',
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function patchListLead(listId, leadId, data) {
+  const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/leads/${encodeURIComponent(leadId)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}

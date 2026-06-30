@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { patchLead } from '../api.js'
+import AddToListBtn from './AddToListBtn.jsx'
 
 const TEMP_ICON  = { chaud: '🔥', tiede: '🟠', froid: '❄️', a_verifier: '❓' }
 const TEMP_LABEL = { chaud: 'Chaud', tiede: 'Tiède', froid: 'Froid', a_verifier: 'À vérifier' }
@@ -14,7 +15,7 @@ const STATUS_LABEL = {
   UNVERIFIED: 'Inconnu',
 }
 
-export default function LeadRow({ lead, onUpdate }) {
+export default function LeadRow({ lead, onUpdate, lists, onListsChange }) {
   const [called, setCalled]       = useState(Boolean(lead.called))
   const [saving, setSaving]       = useState(false)
   const [showNotes, setShowNotes] = useState(false)
@@ -117,6 +118,13 @@ export default function LeadRow({ lead, onUpdate }) {
           >
             📝
           </button>
+          <AddToListBtn
+            lead={lead}
+            lists={lists}
+            onAdded={(list) => onListsChange?.(prev =>
+              prev.map(l => l.id === list.id ? { ...l, lead_count: (l.lead_count || 0) + 1 } : l)
+            )}
+          />
         </div>
       </div>
 

@@ -70,6 +70,19 @@ class CategoriesRequest(BaseModel):
     categories: dict[str, list[str]]
 
 
+class CreateListRequest(BaseModel):
+    name: str
+
+
+class AddLeadsRequest(BaseModel):
+    lead_ids: list[str]
+
+
+class PatchListLeadRequest(BaseModel):
+    status: Optional[str] = None
+    notes: Optional[str] = None
+
+
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @app.post("/api/scan", response_model=ScanSummary)
@@ -185,6 +198,56 @@ async def suggest_cities(q: str = Query(..., min_length=2)) -> list[dict]:
         detail = f"{dept.get('nom', '')} ({dept.get('code', '')})" if dept else ""
         out.append({"name": name, "detail": detail, "place_id": None})
     return out
+
+
+@app.get("/api/lists")
+async def get_lists() -> list[dict]:
+    return await store.get_lists()
+
+
+@app.post("/api/lists")
+async def create_list(req: CreateListRequest) -> dict:
+    name = req.name.strip()
+    if not name:
+        raise HTTPException(400, "Nom de liste vide")
+    return await store.create_list(name)
+
+
+@app.delete("/api/lists/{list_id}")
+async def delete_list(list_id: str) -> dict:
+    if not await store.delete_list(list_id):
+        raise HTTPException(404, f"Liste {list_id!r} introuvable")
+    return {"ok": True}
+
+
+@app.get("/api/lists/{list_id}/stats")
+async def get_list_stats(list_id: str) -> dict:
+    return await store.get_list_stats(list_id)
+
+
+@app.get("/api/lists/{list_id}/leads")
+async def get_list_leads(list_id: str) -> list[dict]:
+    return await store.get_list_leads(list_id)
+
+
+@app.post("/api/lists/{list_id}/leads")
+async def add_leads_to_list(list_id: str, req: AddLeadsRequest) -> dict:
+    count = await store.add_leads_to_list(list_id, req.lead_ids)
+    return {"ok": True, "added": count}
+
+
+@app.delete("/api/lists/{list_id}/leads/{lead_id:path}")
+async def remove_lead_from_list(list_id: str, lead_id: str) -> dict:
+    if not await store.remove_lead_from_list(list_id, lead_id):
+        raise HTTPException(404, "Lead non trouvé dans cette liste")
+    return {"ok": True}
+
+
+@app.patch("/api/lists/{list_id}/leads/{lead_id:path}")
+async def patch_list_lead(list_id: str, lead_id: str, data: PatchListLeadRequest) -> dict:
+    if not await store.patch_list_lead(list_id, lead_id, status=data.status, notes=data.notes):
+        raise HTTPException(404, "Lead non trouvé dans cette liste")
+    return {"ok": True}
 
 
 @app.get("/api/categories")
