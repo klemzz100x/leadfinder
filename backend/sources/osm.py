@@ -147,7 +147,7 @@ def _overpass_query(bbox: tuple[float, float, float, float]) -> str:
             for elem in ("node", "way", "relation"):
                 clauses.append(f'{elem}["{key}"~"^({regex})$"]{b};')
     body = "\n  ".join(clauses)
-    return f"[out:json][timeout:90];\n(\n  {body}\n);\nout center tags;"
+    return f"[out:json][timeout:25];\n(\n  {body}\n);\nout center tags;"
 
 
 class OSMSource(BusinessSource):
@@ -230,15 +230,15 @@ class OSMSource(BusinessSource):
     async def _fetch_bbox_recursive(
         self, bbox: tuple[float, float, float, float], depth: int, max_depth: int = 3
     ) -> list[dict[str, Any]]:
-        """Récupère les éléments d'une bbox ; découpe en 4 si trop gros/timeout."""
+        """Récupère les éléments d'une bbox ; découpe en 4 uniquement si la réponse est tronquée (trop volumineuse)."""
         query = _overpass_query(bbox)
         resp = await self._overpass_call(query)
 
         if resp is None:
-            # Échec : tenter de subdiviser si possible.
-            if depth < max_depth:
-                log.warning("Overpass KO sur bbox %s -> subdivision", bbox)
-                return await self._split_and_fetch(bbox, depth, max_depth)
+            # Échec sur toutes les instances Overpass (serveur indisponible/surchargé) :
+            # subdiviser ne ferait que multiplier des appels voués à échouer. On abandonne
+            # cette branche plutôt que de faire exploser le temps total du scan.
+            log.warning("Overpass indisponible sur bbox %s -> abandon de cette zone", bbox)
             return []
 
         elements = resp.get("elements", [])
@@ -313,7 +313,7 @@ class OSMSource(BusinessSource):
         """Appelle Overpass avec bascule sur miroir + retry."""
         for url in OVERPASS_URLS:
             self._calls += 1
-            resp = await self._request_with_retry("POST", url, data={"data": query})
+            resp = await self._request_with_retry("POST", url, data={"data": query}, max_retries=2)
             if resp is not None:
                 try:
                     return resp.json()
@@ -348,6 +348,7 @@ class OSMSource(BusinessSource):
                 else:
                     log.error("HTTP %d sur %s", resp.status_code, url)
                     return None
-            await asyncio.sleep(delay)
-            delay *= 2  # backoff exponentiel
+            if attempt < max_retries:
+                await asyncio.sleep(delay)
+                delay *= 2  # backoff exponentiel
         return None
