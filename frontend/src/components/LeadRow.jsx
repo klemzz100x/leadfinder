@@ -15,6 +15,18 @@ const STATUS_LABEL = {
   UNVERIFIED: 'Inconnu',
 }
 
+function normalizeWebsiteUrl(website) {
+  return website.startsWith('http') ? website : `https://${website}`
+}
+
+function websiteHostname(website) {
+  try {
+    return new URL(normalizeWebsiteUrl(website)).hostname.replace(/^www\./, '')
+  } catch {
+    return website
+  }
+}
+
 export default function LeadRow({ lead, onUpdate, lists, onListsChange }) {
   const [called, setCalled]       = useState(Boolean(lead.called))
   const [saving, setSaving]       = useState(false)
@@ -90,12 +102,12 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange }) {
             {lead.website && (
               <a
                 className="lead-website"
-                href={lead.website.startsWith('http') ? lead.website : `https://${lead.website}`}
+                href={normalizeWebsiteUrl(lead.website)}
                 target="_blank"
                 rel="noreferrer"
                 title={lead.website}
               >
-                🌐 {new URL(lead.website.startsWith('http') ? lead.website : `https://${lead.website}`).hostname.replace(/^www\./, '')}
+                🌐 {websiteHostname(lead.website)}
               </a>
             )}
           </div>
