@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { googleMapsUrl } from '../utils.js'
 
 export const STATUSES = [
   { value: 'a_contacter',   label: 'À contacter',   color: '#60a5fa' },
@@ -67,6 +68,15 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
           >
             📝
           </button>
+          <a
+            className="btn-notes"
+            href={googleMapsUrl(lead)}
+            target="_blank"
+            rel="noreferrer"
+            title="Voir sur Google Maps"
+          >
+            📍
+          </a>
           <button className="llr-btn-remove" onClick={onRemove} title="Retirer de la liste">✕</button>
         </div>
       </div>

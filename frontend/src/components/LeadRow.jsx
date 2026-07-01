@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { patchLead } from '../api.js'
+import { googleMapsUrl } from '../utils.js'
 import AddToListBtn from './AddToListBtn.jsx'
 
 const TEMP_ICON  = { chaud: '🔥', tiede: '🟠', froid: '❄️', a_verifier: '❓' }
@@ -130,6 +131,15 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange }) {
           >
             📝
           </button>
+          <a
+            className="btn-notes"
+            href={googleMapsUrl(lead)}
+            target="_blank"
+            rel="noreferrer"
+            title="Voir sur Google Maps"
+          >
+            📍
+          </a>
           <AddToListBtn
             lead={lead}
             lists={lists}
