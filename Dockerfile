@@ -14,7 +14,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # --- Build frontend ---
 COPY frontend/package*.json ./frontend/
-RUN cd frontend && npm ci --omit=dev
+RUN cd frontend && npm ci
 COPY frontend/ ./frontend/
 RUN cd frontend && npm run build
 
