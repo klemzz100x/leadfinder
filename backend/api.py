@@ -40,6 +40,7 @@ async def lifespan(app: FastAPI):
     await store.init()
     yield
     await _http.aclose()
+    await store.close()
 
 
 app = FastAPI(title="LeadFinder", version="0.1.0", lifespan=lifespan)

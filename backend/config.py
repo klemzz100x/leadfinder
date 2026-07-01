@@ -13,8 +13,8 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
-    # Base de données locale
-    SQLITE_PATH: str = "leadfinder.db"
+    # Base de données PostgreSQL (Neon, ou toute URL postgresql://...)
+    DATABASE_URL: str = ""
 
     # Clés API optionnelles — le projet tourne sans aucune d'elles.
     PSI_API_KEY: str = ""            # PageSpeed Insights (Phase 2)

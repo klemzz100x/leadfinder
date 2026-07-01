@@ -8,10 +8,10 @@ services:
     dockerfilePath: ./Dockerfile
     # Le port est injecté automatiquement par Render via $PORT.
     # Le CMD du Dockerfile utilise le port 8000 ; Render redirige son $PORT vers 8000.
-    plan: free                  # Tier gratuit — passer à "starter" pour le disk
+    plan: free                  # Tier gratuit — la base Postgres (Neon) est externe et persiste indépendamment.
     envVars:
-      - key: SQLITE_PATH
-        value: /data/leadfinder.db
+      - key: DATABASE_URL
+        sync: false            # À renseigner dans le dashboard Render : URL de connexion Neon.
       # Clés API optionnelles — à ajouter dans le dashboard Render si besoin :
       # - key: PSI_API_KEY
       #   sync: false
@@ -19,11 +19,3 @@ services:
       #   sync: false
       # - key: BRAVE_API_KEY
       #   sync: false
-
-    # ⚠️  Le disk nécessite le plan payant "Starter" ($7/mois).
-    # Sans disk, la base SQLite est perdue à chaque redéploiement.
-    # Pour activer, décommenter le bloc ci-dessous ET changer plan: starter.
-    # disk:
-    #   name: leadfinder-data
-    #   mountPath: /data
-    #   sizeGB: 1

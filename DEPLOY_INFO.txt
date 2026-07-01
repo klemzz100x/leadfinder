@@ -1,0 +1,57 @@
+========================================
+  LEADFINDER — INFOS DÉPLOIEMENT RENDER
+========================================
+
+REPO GITHUB
+-----------
+URL     : https://github.com/klemzz100x/leadfinder
+Compte  : klemzz100x
+Visibil : Privé
+Branche : master
+
+
+DÉPLOIEMENT RENDER
+------------------
+1. render.com → New → Blueprint
+2. Connecter GitHub → sélectionner "leadfinder"
+3. Render détecte render.yaml automatiquement
+
+
+VARIABLES D'ENVIRONNEMENT
+--------------------------
+
+[OBLIGATOIRE]
+DATABASE_URL = URL de connexion Postgres Neon (https://neon.tech, gratuit)
+               Format : postgresql://user:password@ep-xxx.neon.tech/dbname?sslmode=require
+               À créer sur neon.tech (compte gratuit, aucune carte requise), puis coller
+               la "Connection string" dans le dashboard Render → Environment.
+
+[OPTIONNELLES — app fonctionne sans]
+PSI_API_KEY          = (PageSpeed Insights — gratuit 25 000 req/jour)
+                       https://developers.google.com/speed/docs/insights/v5/get-started
+
+GOOGLE_PLACES_API_KEY = (Google Places API — nécessite une CB)
+                        Google Cloud Console
+
+BRAVE_API_KEY        = (Brave Search — gratuit 2 000 req/mois)
+                       https://api.search.brave.com/
+
+
+PLANS RENDER
+------------
+Free : 0€ — la base de données est maintenant externe (Neon Postgres, gratuit
+       et persistant indépendamment de Render), donc aucun plan payant requis
+       pour conserver les données entre les redéploiements.
+
+
+SERVEURS LOCAUX
+---------------
+Backend  (FastAPI) : http://localhost:8000
+Frontend (React)   : http://localhost:5173
+
+Démarrage :
+  cd leadfinder
+  uvicorn backend.api:app --reload      (terminal 1)
+  cd frontend && npm run dev             (terminal 2)
+
+========================================

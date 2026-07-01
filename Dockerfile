@@ -22,9 +22,7 @@ RUN cd frontend && npm run build
 COPY backend/ ./backend/
 COPY .env.example .env.example
 
-# Données persistantes sur /data (Render Disk)
-RUN mkdir -p /data
-ENV SQLITE_PATH=/data/leadfinder.db
+# DATABASE_URL (Postgres Neon) est injecté via les variables d'environnement Render.
 
 EXPOSE 8000
 CMD ["uvicorn", "backend.api:app", "--host", "0.0.0.0", "--port", "8000"]
