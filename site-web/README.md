@@ -155,6 +155,45 @@ les laisser s'accumuler indéfiniment (sans quoi le plafond de 100 projets
 serait atteint en 1 à 2 mois). Domaine personnalisé également gratuit sur ce
 tier le jour où un prospect signe — pas besoin de changer de plan.
 
+## Devis PDF (`site-web/devis/`)
+
+Génère un devis fidèle au template fourni (`Template_devis/`), numéroté
+automatiquement à la suite des devis déjà générés dans `devis/generes/`.
+
+```bash
+cd site-web/devis
+node generate-devis.mjs --name "Miss Yan" --address "58 Rue Faugères, 33130 Bègles" --siret "820 780 492 00022"
+
+# Sans SIRET vérifié : placeholder explicite plutôt qu'un numéro inventé
+node generate-devis.mjs --name "L'Ile O Beauté" --address "20 Rue Jean Mermoz, 33185 Le Haillan"
+```
+
+Émetteur et lignes de prestation fixes (à modifier directement dans
+`generate-devis.mjs` si les tarifs changent). Sortie dans
+`devis/generes/devis-{NN}-{slug}.pdf` (non versionné — cf. `.gitignore`).
+
+**Avant de renseigner un SIRET**, vérifier qu'il est bien actif via la source
+officielle gratuite [annuaire-entreprises.data.gouv.fr](https://annuaire-entreprises.data.gouv.fr/)
+plutôt qu'un annuaire tiers (Pappers, societe.com...) qui peut afficher un
+établissement fermé sans le signaler clairement. Une entreprise close/radiée
+mais encore visible sur les annuaires classiques n'est pas un cas
+théorique — ça s'est produit sur les tout premiers devis générés.
+
+## Onboarding d'un nouveau client à partir d'un lien Google Maps
+
+Workflow pour chaque nouveau lead closé :
+
+1. **Résoudre le lien** — un lien Google Maps ne se scrape pas par un script
+   déterministe (mur de consentement Google) ; identifier nom, adresse,
+   téléphone, et SIRET (via l'annuaire officiel ci-dessus) se fait par
+   recherche web, pas par une commande automatique.
+2. **Générer le site** : `node generate.mjs --template ... --name "..." --address "..." --phone "..."`
+3. **Générer le devis** : `node devis/generate-devis.mjs --name "..." --address "..." --siret "..."`
+4. **Déployer** (optionnel à ce stade) : `node deploy.mjs sites-generes/{slug} "{slug}"`
+
+Les étapes 2–4 sont scriptées et fiables ; l'étape 1 reste une recherche
+manuelle à chaque nouveau lien.
+
 ## Ajouter un nouveau secteur (fast-food, restaurant avec menu, etc.)
 
 Créer un nouveau dossier dans `templates/` avec la même structure
