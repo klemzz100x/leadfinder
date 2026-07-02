@@ -16,6 +16,12 @@ import ImagePlaceholder from './ImagePlaceholder.astro';
   <div class="absolute inset-0 bg-gradient-to-t from-stone-900/85 via-stone-900/40 to-stone-900/10"></div>
 
   <div class="relative z-10 w-full max-w-5xl mx-auto px-6 pb-16 text-white">
+    {siteConfig.avisGlobal?.nombre > 0 && (
+      <div class="inline-flex items-center gap-1.5 bg-white/15 backdrop-blur px-3 py-1.5 rounded-full text-sm font-medium mb-4">
+        <span class="text-amber-400">★★★★★</span>
+        {siteConfig.avisGlobal.note}/5 · {siteConfig.avisGlobal.nombre} avis{siteConfig.avisGlobal.source ? ` ${siteConfig.avisGlobal.source}` : ''}
+      </div>
+    )}
     <h1 class="text-4xl sm:text-6xl font-serif font-semibold tracking-tight drop-shadow-sm">
       {siteConfig.nom}
     </h1>

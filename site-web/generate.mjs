@@ -72,14 +72,17 @@ sociaux...). Le nom/adresse/téléphone/lien Maps ont déjà été injectés
 automatiquement si disponibles.
 ${calLinkNote}
 
-## Déploiement rapide (Vercel)
+## Déploiement rapide (Cloudflare Pages)
+
+Depuis \`site-web/\` (voir README.md de ce dossier pour la configuration du
+token) :
 
 \`\`\`bash
-npm install
-npx vercel --prod
+node deploy.mjs sites-generes/${slug} "${slug}"
 \`\`\`
 
-Ou connectez ce dossier à un nouveau projet depuis le dashboard Vercel.
+Affiche l'URL de preview (\`https://${slug}.pages.dev\`) à envoyer au
+prospect, sans étape manuelle.
 
 ## Développement local
 

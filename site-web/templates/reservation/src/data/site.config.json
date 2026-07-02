@@ -8,6 +8,13 @@
   "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Adresse+a+remplacer",
   "siteWebActuel": null,
   "heroImage": null,
+  "avisGlobal": { "note": null, "nombre": 0, "source": "à remplacer (ex: Google)" },
+  "garanties": [
+    { "icone": "🧼", "titre": "Hygiène irréprochable", "texte": "Matériel stérilisé, protocoles stricts" },
+    { "icone": "✨", "titre": "Produits de qualité", "texte": "Marques professionnelles sélectionnées" },
+    { "icone": "🎓", "titre": "Équipe qualifiée", "texte": "Professionnels formés et expérimentés" },
+    { "icone": "📍", "titre": "Facile d'accès", "texte": "À remplacer — parking, transports..." }
+  ],
   "horaires": [
     { "jour": "Lundi", "heures": "Fermé" },
     { "jour": "Mardi", "heures": "09h00 – 19h00" },

@@ -6,12 +6,14 @@
 interface Props {
   label?: string;
   class?: string;
+  style?: string;
 }
-const { label = "Photo à remplacer", class: className = "" } = Astro.props;
+const { label = "Photo à remplacer", class: className = "", style } = Astro.props;
 ---
 
 <div
   class={`flex flex-col items-center justify-center gap-2 bg-stone-200 text-stone-400 border-2 border-dashed border-stone-300 ${className}`}
+  style={style}
 >
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="w-10 h-10">
     <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75l5.159-5.159a2.25 2.25 0 013.182 0l5.159 5.159m-1.5-1.5l1.409-1.409a2.25 2.25 0 013.182 0l2.909 2.909M3 4.5h18M3.75 21h16.5a1.5 1.5 0 001.5-1.5V6a1.5 1.5 0 00-1.5-1.5H3.75A1.5 1.5 0 002.25 6v13.5a1.5 1.5 0 001.5 1.5z" />

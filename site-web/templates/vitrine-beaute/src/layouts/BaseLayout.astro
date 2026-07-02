@@ -20,5 +20,41 @@ const pageTitle = title ?? siteConfig.nom;
   </head>
   <body class="bg-stone-50 text-stone-800 font-sans antialiased">
     <slot />
+    <script is:inline>
+      // Animation légère au scroll (IntersectionObserver natif, pas de dépendance
+      // ajoutée) — les éléments .reveal apparaissent en fondu/translation à l'entrée
+      // dans le viewport, en cascade pour les grilles via --reveal-index.
+      //
+      // Filet de sécurité : si un élément .reveal n'a toujours pas été révélé après
+      // 2s (contenu déjà visible à l'écran au chargement mais raté par l'observer,
+      // JS lent à s'exécuter, etc.), on force son affichage — le contenu ne doit
+      // jamais rester invisible pour de vrai, l'animation est un bonus, pas un piège.
+      (function revealOnScroll() {
+        const items = Array.from(document.querySelectorAll('.reveal'));
+        if (items.length === 0) return;
+
+        if (!('IntersectionObserver' in window)) {
+          items.forEach((el) => el.classList.add('is-visible'));
+          return;
+        }
+
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (entry.isIntersecting) {
+                entry.target.classList.add('is-visible');
+                io.unobserve(entry.target);
+              }
+            });
+          },
+          { threshold: 0, rootMargin: '0px 0px -10% 0px' }
+        );
+        items.forEach((el) => io.observe(el));
+
+        setTimeout(() => {
+          items.forEach((el) => el.classList.add('is-visible'));
+        }, 2000);
+      })();
+    </script>
   </body>
 </html>

@@ -1,0 +1,19 @@
+---
+import siteConfig from '../data/site.config.json';
+
+const { garanties } = siteConfig;
+---
+
+{garanties?.length > 0 && (
+  <section class="bg-white py-10 border-y border-stone-100">
+    <div class="max-w-5xl mx-auto px-6 grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
+      {garanties.map((g, i) => (
+        <div class="reveal flex flex-col items-center gap-2" style={`--reveal-index: ${i}`}>
+          <span class="text-3xl">{g.icone}</span>
+          <p class="text-sm font-semibold text-stone-900">{g.titre}</p>
+          <p class="text-xs text-stone-500">{g.texte}</p>
+        </div>
+      ))}
+    </div>
+  </section>
+)}

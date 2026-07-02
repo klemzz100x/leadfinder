@@ -3,18 +3,20 @@ import siteConfig from '../data/site.config.json';
 import ImagePlaceholder from './ImagePlaceholder.astro';
 ---
 
-<section class="bg-stone-100 py-20">
+<section id="galerie" class="bg-stone-100 py-20">
   <div class="max-w-6xl mx-auto px-6">
     <div class="text-center mb-12">
       <span class="text-rose-600 font-semibold uppercase tracking-widest text-sm">Galerie</span>
       <h2 class="mt-3 text-3xl sm:text-4xl font-serif font-semibold text-stone-900">Notre univers en images</h2>
     </div>
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      {siteConfig.galerie.map((photo) => (
+      {siteConfig.galerie.map((photo, i) => (
         photo.src ? (
-          <img src={photo.src} alt={photo.alt} class="w-full aspect-square object-cover rounded-xl shadow-md" />
+          <div class="reveal overflow-hidden rounded-xl shadow-md" style={`--reveal-index: ${i}`}>
+            <img src={photo.src} alt={photo.alt} class="w-full aspect-square object-cover transition-transform duration-500 hover:scale-110" />
+          </div>
         ) : (
-          <ImagePlaceholder label={photo.alt} class="w-full aspect-square rounded-xl" />
+          <ImagePlaceholder label={photo.alt} class={`reveal w-full aspect-square rounded-xl`} style={`--reveal-index: ${i}`} />
         )
       ))}
     </div>
