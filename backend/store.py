@@ -235,12 +235,6 @@ class LeadStore:
         rows = await self.pool.fetch(sql, *values)
         return [dict(r) for r in rows]
 
-    async def distinct_departements(self) -> list[str]:
-        rows = await self.pool.fetch(
-            "SELECT DISTINCT departement FROM leads WHERE departement IS NOT NULL ORDER BY departement"
-        )
-        return [r["departement"] for r in rows]
-
     async def stats_by_ville(self, business_types: Optional[list[str]] = None) -> list[dict[str, Any]]:
         """Nombre de leads chauds (et total actif) par ville, agrégé côté serveur.
 

@@ -124,13 +124,20 @@ async def get_leads(
 
 @app.get("/api/leads/meta")
 async def leads_meta(city: Optional[str] = Query(None)) -> dict:
-    """Villes, types et départements distincts pour alimenter les filtres UI."""
-    dept_codes = await store.distinct_departements()
+    """Villes et types distincts pour alimenter les filtres UI."""
     return {
         "cities": await store.distinct_cities(),
         "types": await store.distinct_types(city=city),
-        "departements": [{"code": c, "name": DEPARTEMENTS.get(c, c)} for c in dept_codes],
     }
+
+
+@app.get("/api/departements")
+async def get_departements() -> list[dict]:
+    """Liste officielle complète des départements (France métropolitaine),
+    indépendante des scans déjà effectués — le sélecteur de filtre doit
+    proposer les 95 départements dès l'arrivée sur la page, pas seulement
+    ceux déjà présents en base."""
+    return [{"code": code, "name": name} for code, name in sorted(DEPARTEMENTS.items())]
 
 
 @app.post("/api/leads/{lead_id:path}/audit")

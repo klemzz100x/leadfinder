@@ -31,6 +31,12 @@ export async function fetchMeta(city) {
   return res.json()
 }
 
+export async function fetchDepartements() {
+  const res = await fetch(`${BASE}/departements`)
+  if (!res.ok) return []
+  return res.json()
+}
+
 export async function patchLead(id, data) {
   const res = await fetch(`${BASE}/leads/${encodeURIComponent(id)}`, {
     method: 'PATCH',

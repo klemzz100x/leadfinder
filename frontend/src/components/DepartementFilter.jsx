@@ -36,7 +36,7 @@ export default function DepartementFilter({ departements, selected, onChange }) 
             </button>
           )}
           {departements.length === 0 && (
-            <p className="dept-filter-empty">Aucun département dans les résultats actuels.</p>
+            <p className="dept-filter-empty">Liste des départements indisponible pour le moment.</p>
           )}
           {departements.map((d) => (
             <label key={d.code} className="dept-filter-item">

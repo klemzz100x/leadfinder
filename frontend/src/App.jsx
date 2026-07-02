@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react'
 import {
-  scanCity, fetchLeads, fetchMeta, exportCsvUrl,
+  scanCity, fetchLeads, fetchMeta, fetchDepartements, exportCsvUrl,
   fetchCategories, fetchLists,
 } from './api.js'
 import SearchBar from './components/SearchBar.jsx'
@@ -21,6 +21,7 @@ export default function App() {
   const [types, setTypes]       = useState([])
   const [filter, setFilter]     = useState({ temperature: '', type: '', showEquipped: false, showClosed: false, departements: [] })
   const [departements, setDepartements] = useState([])
+  const [resultsLoaded, setResultsLoaded] = useState(false)
   const [error, setError]       = useState('')
 
   const [viewMode, setViewMode]                 = useState('list')
@@ -36,14 +37,16 @@ export default function App() {
 
   useEffect(() => {
     fetchLists().then(setLists)
+    fetchDepartements().then(setDepartements)
+    fetchMeta().then((meta) => setTypes(meta.types || []))
   }, [])
 
   const loadLeads = useCallback(async (c, f = filter) => {
     const data = await fetchLeads({ city: c, ...f })
     setLeads(data)
+    setResultsLoaded(true)
     const meta = await fetchMeta(c)
     setTypes(meta.types || [])
-    setDepartements(meta.departements || [])
   }, [filter])
 
   const handleScan = async () => {
@@ -64,9 +67,13 @@ export default function App() {
     }
   }
 
+  // Le filtre (notamment le sélecteur de département) est utilisable dès
+  // l'arrivée sur la page, sans attendre un scan : il interroge directement
+  // les leads déjà en base. Combiné à une ville tapée (scannée ou non), les
+  // deux critères s'appliquent ensemble via /api/leads.
   const handleFilterChange = async (newFilter) => {
     setFilter(newFilter)
-    if (summary) await loadLeads(city.trim(), newFilter)
+    await loadLeads(city.trim(), newFilter)
   }
 
   const handleLeadUpdate = (updated) => {
@@ -144,39 +151,41 @@ export default function App() {
 
       {tab === 'search' && (
         <>
-          {summary && (
-            <>
-              <StatsBar summary={summary} />
-              <div className="toolbar">
-                <FilterBar filter={filter} types={types} departements={departements} onChange={handleFilterChange} />
-                <div className="toolbar-divider" />
-                <div className="view-toggle">
-                  <button
-                    className={`btn btn-view-toggle${viewMode === 'list' ? ' active' : ''}`}
-                    onClick={() => handleViewMode('list')}
-                  >
-                    ≡ Liste
-                  </button>
-                  <button
-                    className={`btn btn-view-toggle${viewMode === 'categories' ? ' active' : ''}`}
-                    onClick={() => handleViewMode('categories')}
-                  >
-                    ⊞ Catégories
-                  </button>
-                </div>
-                <button className="btn btn-cat-editor" onClick={handleOpenEditor}>
-                  ⚙ Catégories
-                </button>
-                <div className="toolbar-divider" />
-                <a className="btn btn-export" href={exportCsvUrl(city.trim())} download>
-                  ↓ CSV
-                </a>
-              </div>
-            </>
-          )}
+          {summary && <StatsBar summary={summary} />}
+
+          <div className="toolbar">
+            <FilterBar filter={filter} types={types} departements={departements} onChange={handleFilterChange} />
+            <div className="toolbar-divider" />
+            <div className="view-toggle">
+              <button
+                className={`btn btn-view-toggle${viewMode === 'list' ? ' active' : ''}`}
+                onClick={() => handleViewMode('list')}
+              >
+                ≡ Liste
+              </button>
+              <button
+                className={`btn btn-view-toggle${viewMode === 'categories' ? ' active' : ''}`}
+                onClick={() => handleViewMode('categories')}
+              >
+                ⊞ Catégories
+              </button>
+            </div>
+            <button className="btn btn-cat-editor" onClick={handleOpenEditor}>
+              ⚙ Catégories
+            </button>
+            <div className="toolbar-divider" />
+            <a className="btn btn-export" href={exportCsvUrl(city.trim())} download>
+              ↓ CSV
+            </a>
+          </div>
 
           <main>
-            {leads.length === 0 && summary && !scanning && (
+            {!resultsLoaded && !scanning && (
+              <p className="empty">
+                Sélectionnez un ou plusieurs départements, ou lancez une recherche par ville.
+              </p>
+            )}
+            {resultsLoaded && leads.length === 0 && !scanning && (
               <p className="empty">Aucun lead pour ces filtres.</p>
             )}
             {viewMode === 'list' && (
