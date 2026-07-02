@@ -164,6 +164,14 @@ body { min-height: 100vh; }
   color: var(--text);
   border: 1px solid rgba(255, 255, 255, 0.06);
 }
+
+.btn-filter-search {
+  background: linear-gradient(135deg, var(--accent) 0%, #6366f1 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+  padding: 0.4rem 0.8rem;
+}
+.btn-filter-search:hover { box-shadow: 0 4px 16px rgba(59, 130, 246, 0.5); }
 .btn-sm {
   padding: 0.3rem 0.65rem;
   font-size: 0.8rem;

@@ -219,7 +219,13 @@ export default function App() {
           {summary && <StatsBar summary={summary} />}
 
           <div className="toolbar">
-            <FilterBar filter={filter} types={types} departements={departements} onChange={handleFilterChange} />
+            <FilterBar
+              filter={filter}
+              types={types}
+              departements={departements}
+              onChange={handleFilterChange}
+              onSearch={() => loadLeads(city.trim(), filter)}
+            />
             <div className="toolbar-divider" />
             <div className="view-toggle">
               <button
@@ -247,29 +253,48 @@ export default function App() {
           <main>
             {!resultsLoaded && !scanning && (
               <p className="empty">
-                Filtrez par température et/ou type d'activité (ex : tous les salons de beauté "chauds" de France, sans rien
-                cocher d'autre), affinez par département, ou lancez une recherche/un scan par ville.
+                Filtrez par température et/ou type d'activité puis cliquez sur <strong>🔍 Rechercher</strong> (ex : tous les
+                salons de beauté "chauds" de France, sans rien cocher d'autre) — ou affinez par département, ou lancez un
+                scan par ville.
               </p>
             )}
-            {resultsLoaded && leads.length === 0 && !scanning && (
-              <div className="dept-stats-empty">
-                {!city.trim() && filter.departements.length > 0 ? (
-                  <>
+            {resultsLoaded && leads.length === 0 && !scanning && (() => {
+              // Zéro résultat avec des départements déjà scannés ne veut pas dire
+              // "jamais scanné" — juste qu'aucun lead ne correspond à CES filtres
+              // (ex : chaud + beauté) dans ces départements. Ne proposer un scan
+              // que pour les départements réellement sans données, sinon on pousse
+              // vers des rescans redondants (le souci que la couverture partagée
+              // est censée éviter).
+              const selected = filter.departements
+                .map((code) => departements.find((d) => d.code === code) || { code, name: code })
+              const neverScanned = selected.filter((d) => !d.last_scanned_at)
+              if (city.trim() || selected.length === 0) {
+                return <div className="dept-stats-empty"><p>Aucun lead pour ces filtres.</p></div>
+              }
+              if (neverScanned.length === 0) {
+                return (
+                  <div className="dept-stats-empty">
                     <p>
-                      Aucun lead pour {filter.departements
-                        .map((code) => departements.find((d) => d.code === code)?.name || code)
-                        .join(', ')} — ce département n'a peut-être jamais été scanné.
+                      Aucun lead ne correspond à ces filtres dans {selected.map((d) => d.name).join(', ')} — déjà
+                      scanné{selected.length > 1 ? 's' : ''}, essayez d'élargir vos filtres (température, type).
                     </p>
-                    <DeptScanEstimate codes={filter.departements} />
-                    <button className="btn btn-scan" onClick={handleScan}>
-                      🔍 Scanner {filter.departements.length > 1 ? 'ces départements' : 'ce département'}
-                    </button>
-                  </>
-                ) : (
-                  <p>Aucun lead pour ces filtres.</p>
-                )}
-              </div>
-            )}
+                  </div>
+                )
+              }
+              return (
+                <div className="dept-stats-empty">
+                  <p>
+                    {neverScanned.map((d) => d.name).join(', ')} n'{neverScanned.length > 1 ? 'ont' : 'a'} pas encore
+                    été scanné{neverScanned.length > 1 ? 's' : ''}.
+                    {neverScanned.length < selected.length && ' Les autres départements sélectionnés sont déjà couverts.'}
+                  </p>
+                  <DeptScanEstimate codes={neverScanned.map((d) => d.code)} />
+                  <button className="btn btn-scan" onClick={handleScan}>
+                    🔍 Scanner {neverScanned.length > 1 ? 'ces départements' : 'ce département'}
+                  </button>
+                </div>
+              )
+            })()}
             {viewMode === 'list' && (
               <LeadList
                 leads={leads}

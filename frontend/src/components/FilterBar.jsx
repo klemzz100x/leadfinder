@@ -8,7 +8,7 @@ const TEMPS = [
   { value: 'a_verifier', label: '❓ À vérifier' },
 ]
 
-export default function FilterBar({ filter, types, departements = [], onChange }) {
+export default function FilterBar({ filter, types, departements = [], onChange, onSearch }) {
   const set = (key, value) => onChange({ ...filter, [key]: value })
 
   return (
@@ -55,6 +55,17 @@ export default function FilterBar({ filter, types, departements = [], onChange }
         />
         Afficher les fermés
       </label>
+
+      {onSearch && (
+        <button
+          type="button"
+          className="btn btn-filter-search"
+          onClick={onSearch}
+          title="Cherche parmi les leads déjà en base avec ces filtres — sur toute la France si aucun département n'est coché"
+        >
+          🔍 Rechercher
+        </button>
+      )}
     </div>
   )
 }
