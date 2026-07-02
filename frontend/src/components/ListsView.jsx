@@ -74,6 +74,11 @@ export default function ListsView({ lists, onListsChange }) {
     setListLeads(prev => prev.map(l => l.id === lead.id ? { ...l, list_notes: notes } : l))
   }
 
+  const handleBudget = async (lead, fields) => {
+    await patchListLead(selected.id, lead.id, fields)
+    setListLeads(prev => prev.map(l => l.id === lead.id ? { ...l, ...fields } : l))
+  }
+
   const handleRemove = async (lead) => {
     await removeLeadFromList(selected.id, lead.id)
     setListLeads(prev => prev.filter(l => l.id !== lead.id))
@@ -168,6 +173,7 @@ export default function ListsView({ lists, onListsChange }) {
                   onStatusChange={status => handleStatusChange(lead, status)}
                   onRemove={() => handleRemove(lead)}
                   onNotesChange={notes => handleNotes(lead, notes)}
+                  onBudgetChange={fields => handleBudget(lead, fields)}
                 />
               ))}
             </div>

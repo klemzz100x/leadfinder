@@ -73,11 +73,21 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange }) {
           <span className="lead-type">{lead.business_type}</span>
         </div>
 
-        {/* Colonne 3 / Ligne 1 : badge web */}
+        {/* Colonne 3 / Ligne 1 : badge web + signaux Google Places */}
         <div className="lead-card-top-right">
           <span className={`web-badge status-${lead.web_status}`}>
             {STATUS_LABEL[lead.web_status] || lead.web_status}
           </span>
+          {lead.gmaps_website && (
+            <span className="gmaps-badge gmaps-equipped" title={lead.gmaps_website}>
+              ✅ Déjà équipé
+            </span>
+          )}
+          {lead.gmaps_status === 'closed_permanently' && (
+            <span className="gmaps-badge gmaps-closed">
+              ⛔ Fermé définitivement
+            </span>
+          )}
         </div>
 
         {/* Colonne 1-2 / Ligne 2 : score + téléphone */}
@@ -133,7 +143,7 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange }) {
           </button>
           <a
             className="btn-notes"
-            href={googleMapsUrl(lead)}
+            href={lead.gmaps_url || googleMapsUrl(lead)}
             target="_blank"
             rel="noreferrer"
             title="Voir sur Google Maps"

@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { saveCategories } from '../api.js'
 
+const emptyDef = () => ({ types: [], budget_min: null, budget_max: null, objectif_closes_mensuel: null })
+
 export default function CategoryEditor({ categories, types, onClose, onSave }) {
   // Deep-clone to avoid mutating parent state during editing
   const [cats, setCats] = useState(() => JSON.parse(JSON.stringify(categories)))
@@ -9,14 +11,21 @@ export default function CategoryEditor({ categories, types, onClose, onSave }) {
   const [error, setError] = useState('')
 
   // Types already assigned across all categories
-  const assignedTypes = new Set(Object.values(cats).flat())
+  const assignedTypes = new Set(Object.values(cats).flatMap((c) => c.types || []))
   // Types available to add = data types not yet assigned anywhere
   const availableTypes = (types || []).filter((t) => !assignedTypes.has(t))
+
+  const updateField = (cat, field, value) => {
+    setCats((prev) => ({
+      ...prev,
+      [cat]: { ...prev[cat], [field]: value },
+    }))
+  }
 
   const removeTypeFromCat = (cat, type) => {
     setCats((prev) => ({
       ...prev,
-      [cat]: prev[cat].filter((t) => t !== type),
+      [cat]: { ...prev[cat], types: prev[cat].types.filter((t) => t !== type) },
     }))
   }
 
@@ -24,14 +33,14 @@ export default function CategoryEditor({ categories, types, onClose, onSave }) {
     if (!type) return
     setCats((prev) => ({
       ...prev,
-      [cat]: [...(prev[cat] || []), type],
+      [cat]: { ...prev[cat], types: [...(prev[cat].types || []), type] },
     }))
   }
 
   const addCategory = () => {
     const name = newCatName.trim()
     if (!name || cats[name] !== undefined) return
-    setCats((prev) => ({ ...prev, [name]: [] }))
+    setCats((prev) => ({ ...prev, [name]: emptyDef() }))
     setNewCatName('')
   }
 
@@ -62,6 +71,8 @@ export default function CategoryEditor({ categories, types, onClose, onSave }) {
     if (e.target === e.currentTarget) onClose()
   }
 
+  const numOrNull = (v) => (v === '' ? null : Number(v))
+
   return (
     <div className="modal-overlay" onClick={handleOverlayClick}>
       <div className="modal-panel" role="dialog" aria-modal="true" aria-label="Éditer les catégories">
@@ -71,7 +82,7 @@ export default function CategoryEditor({ categories, types, onClose, onSave }) {
         </div>
 
         <div className="modal-body">
-          {Object.entries(cats).map(([cat, catTypes]) => (
+          {Object.entries(cats).map(([cat, def]) => (
             <div key={cat} className="cat-editor-group">
               <div className="cat-editor-header">
                 <span className="cat-editor-name">{cat}</span>
@@ -84,7 +95,7 @@ export default function CategoryEditor({ categories, types, onClose, onSave }) {
               </div>
 
               <div className="cat-editor-types">
-                {catTypes.map((type) => (
+                {(def.types || []).map((type) => (
                   <span key={type} className="cat-type-pill">
                     {type}
                     <button
@@ -114,11 +125,41 @@ export default function CategoryEditor({ categories, types, onClose, onSave }) {
                   </select>
                 )}
 
-                {catTypes.length === 0 && availableTypes.length === 0 && (
+                {(def.types || []).length === 0 && availableTypes.length === 0 && (
                   <span style={{ color: 'var(--muted)', fontSize: '0.8rem' }}>
                     Aucun type disponible
                   </span>
                 )}
+              </div>
+
+              <div className="cat-editor-budget">
+                <label>
+                  Budget min (€)
+                  <input
+                    type="number"
+                    min="0"
+                    value={def.budget_min ?? ''}
+                    onChange={(e) => updateField(cat, 'budget_min', numOrNull(e.target.value))}
+                  />
+                </label>
+                <label>
+                  Budget max (€)
+                  <input
+                    type="number"
+                    min="0"
+                    value={def.budget_max ?? ''}
+                    onChange={(e) => updateField(cat, 'budget_max', numOrNull(e.target.value))}
+                  />
+                </label>
+                <label>
+                  Objectif closes/mois
+                  <input
+                    type="number"
+                    min="0"
+                    value={def.objectif_closes_mensuel ?? ''}
+                    onChange={(e) => updateField(cat, 'objectif_closes_mensuel', numOrNull(e.target.value))}
+                  />
+                </label>
               </div>
             </div>
           ))}

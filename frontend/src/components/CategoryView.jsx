@@ -15,8 +15,8 @@ export default function CategoryView({ leads, categories, onUpdate }) {
 
   // Build reverse map : business_type → category name
   const typeToCategory = {}
-  Object.entries(categories).forEach(([cat, types]) => {
-    types.forEach((t) => { typeToCategory[t] = cat })
+  Object.entries(categories).forEach(([cat, def]) => {
+    (def.types || []).forEach((t) => { typeToCategory[t] = cat })
   })
 
   // Initialize groups in category order, then "Autres"

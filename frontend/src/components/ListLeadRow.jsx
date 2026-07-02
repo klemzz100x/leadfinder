@@ -15,12 +15,15 @@ export const STATUSES = [
 
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.value, s]))
 
-export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesChange }) {
+export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesChange, onBudgetChange }) {
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState(lead.list_notes || '')
   const [saving, setSaving] = useState(false)
+  const [budgetPropose, setBudgetPropose] = useState(lead.budget_propose ?? '')
+  const [budgetFinal, setBudgetFinal] = useState(lead.budget_final ?? '')
 
   const meta = STATUS_MAP[lead.list_status] || STATUSES[0]
+  const group = getGroup(lead.list_status)
 
   const handleStatus = async (e) => {
     setSaving(true)
@@ -33,9 +36,14 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
     setShowNotes(false)
   }
 
+  const handleBudgetBlur = (field, value) => {
+    const num = value === '' ? null : Number(value)
+    onBudgetChange?.({ [field]: num })
+  }
+
   return (
     <>
-      <div className={`llr-row status-group-${getGroup(lead.list_status)}`}>
+      <div className={`llr-row status-group-${group}`}>
         <div className="llr-info">
           <span className="llr-name" title={lead.address || lead.name}>{lead.name}</span>
           <span className="llr-meta">{lead.business_type}{lead.city ? ` · ${lead.city}` : ''}</span>
@@ -47,6 +55,32 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
             : <span className="llr-no-phone">Pas de tél.</span>
           }
         </div>
+        {(group === 'devis' || group === 'won') && (
+          <div className="llr-budget-col">
+            <input
+              type="number"
+              min="0"
+              className="llr-budget-input"
+              placeholder="Devisé €"
+              title="Budget proposé"
+              value={budgetPropose}
+              onChange={(e) => setBudgetPropose(e.target.value)}
+              onBlur={(e) => handleBudgetBlur('budget_propose', e.target.value)}
+            />
+            {group === 'won' && (
+              <input
+                type="number"
+                min="0"
+                className="llr-budget-input"
+                placeholder="Final €"
+                title="Budget final closé"
+                value={budgetFinal}
+                onChange={(e) => setBudgetFinal(e.target.value)}
+                onBlur={(e) => handleBudgetBlur('budget_final', e.target.value)}
+              />
+            )}
+          </div>
+        )}
         <div className="llr-status-col">
           <select
             className="status-select"
@@ -70,7 +104,7 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
           </button>
           <a
             className="btn-notes"
-            href={googleMapsUrl(lead)}
+            href={lead.gmaps_url || googleMapsUrl(lead)}
             target="_blank"
             rel="noreferrer"
             title="Voir sur Google Maps"

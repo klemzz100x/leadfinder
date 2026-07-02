@@ -20,6 +20,7 @@ from pydantic import BaseModel
 
 from .audit import audit_url
 from .categories import load_categories, save_categories
+from .departements import DEPARTEMENT_CENTROIDS, DEPARTEMENTS
 from .pipeline import ScanSummary, scan_city
 from .sources.osm import USER_AGENT
 from .store import LeadStore
@@ -67,8 +68,15 @@ class PatchLeadRequest(BaseModel):
     notes: Optional[str] = None
 
 
+class CategoryDef(BaseModel):
+    types: list[str]
+    budget_min: Optional[float] = None
+    budget_max: Optional[float] = None
+    objectif_closes_mensuel: Optional[int] = None
+
+
 class CategoriesRequest(BaseModel):
-    categories: dict[str, list[str]]
+    categories: dict[str, CategoryDef]
 
 
 class CreateListRequest(BaseModel):
@@ -82,6 +90,8 @@ class AddLeadsRequest(BaseModel):
 class PatchListLeadRequest(BaseModel):
     status: Optional[str] = None
     notes: Optional[str] = None
+    budget_propose: Optional[float] = None
+    budget_final: Optional[float] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -92,7 +102,7 @@ async def scan(req: ScanRequest) -> ScanSummary:
     city = req.city.strip()
     if not city:
         raise HTTPException(400, "Paramètre 'city' vide")
-    return await scan_city(city, store)
+    return await scan_city(city, store, http_client=_http)
 
 
 @app.get("/api/leads")
@@ -100,17 +110,26 @@ async def get_leads(
     city: Optional[str] = Query(None),
     temperature: Optional[str] = Query(None),
     type: Optional[str] = Query(None, alias="type"),
+    show_equipped: bool = Query(False),
+    show_closed: bool = Query(False),
+    departements: Optional[list[str]] = Query(None),
 ) -> list[dict]:
     """Liste des leads triée par score décroissant, avec filtres optionnels."""
-    return await store.get_leads(city=city, temperature=temperature, business_type=type)
+    return await store.get_leads(
+        city=city, temperature=temperature, business_type=type,
+        show_equipped=show_equipped, show_closed=show_closed,
+        departements=departements,
+    )
 
 
 @app.get("/api/leads/meta")
 async def leads_meta(city: Optional[str] = Query(None)) -> dict:
-    """Villes et types distincts pour alimenter les filtres UI."""
+    """Villes, types et départements distincts pour alimenter les filtres UI."""
+    dept_codes = await store.distinct_departements()
     return {
         "cities": await store.distinct_cities(),
         "types": await store.distinct_types(city=city),
+        "departements": [{"code": c, "name": DEPARTEMENTS.get(c, c)} for c in dept_codes],
     }
 
 
@@ -246,22 +265,62 @@ async def remove_lead_from_list(list_id: str, lead_id: str) -> dict:
 
 @app.patch("/api/lists/{list_id}/leads/{lead_id:path}")
 async def patch_list_lead(list_id: str, lead_id: str, data: PatchListLeadRequest) -> dict:
-    if not await store.patch_list_lead(list_id, lead_id, status=data.status, notes=data.notes):
+    updated = await store.patch_list_lead(
+        list_id, lead_id, status=data.status, notes=data.notes,
+        budget_propose=data.budget_propose, budget_final=data.budget_final,
+    )
+    if not updated:
         raise HTTPException(404, "Lead non trouvé dans cette liste")
     return {"ok": True}
 
 
+@app.get("/api/dashboard")
+async def get_dashboard(month: Optional[str] = Query(None, description="YYYY-MM, défaut mois courant")) -> dict:
+    """Dashboard commercial agrégé (tous les prospect_lists confondus) : closes du
+    mois, CA réel vs objectif par catégorie, classement, streak."""
+    return await store.get_dashboard_stats(month=month)
+
+
 @app.get("/api/categories")
-async def get_categories() -> dict[str, list[str]]:
-    """Retourne les catégories métier actuelles."""
+async def get_categories() -> dict[str, dict]:
+    """Retourne les catégories métier actuelles (types + budget cible éditable)."""
     return load_categories()
 
 
 @app.put("/api/categories")
 async def put_categories(req: CategoriesRequest) -> dict:
     """Sauvegarde les catégories métier dans categories.json."""
-    save_categories(req.categories)
+    save_categories({name: c.model_dump() for name, c in req.categories.items()})
     return {"ok": True}
+
+
+@app.get("/api/stats/departements")
+async def stats_departements(activite: Optional[str] = Query(None)) -> list[dict]:
+    """Concentration de leads chauds par département, pour une catégorie d'activité
+    donnée (nom de catégorie tel que défini dans categories.json). Sans `activite`,
+    agrège tous les business_type confondus."""
+    business_types: Optional[list[str]] = None
+    if activite:
+        cat = load_categories().get(activite)
+        business_types = cat["types"] if cat else []
+
+    rows = await store.stats_by_departement(business_types=business_types)
+    out = []
+    for r in rows:
+        code = r["departement"]
+        centroid = DEPARTEMENT_CENTROIDS.get(code)
+        if not centroid:
+            continue
+        out.append({
+            "code": code,
+            "name": DEPARTEMENTS.get(code, code),
+            "lat": centroid[0],
+            "lng": centroid[1],
+            "chauds": r["chauds"],
+            "total": r["total"],
+        })
+    out.sort(key=lambda d: d["chauds"], reverse=True)
+    return out
 
 
 @app.get("/api/health")

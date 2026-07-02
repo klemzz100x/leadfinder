@@ -10,11 +10,14 @@ export async function scanCity(city) {
   return res.json()
 }
 
-export async function fetchLeads({ city, temperature, type } = {}) {
+export async function fetchLeads({ city, temperature, type, showEquipped, showClosed, departements } = {}) {
   const p = new URLSearchParams()
   if (city) p.set('city', city)
   if (temperature) p.set('temperature', temperature)
   if (type) p.set('type', type)
+  if (showEquipped) p.set('show_equipped', 'true')
+  if (showClosed) p.set('show_closed', 'true')
+  for (const d of departements || []) p.append('departements', d)
   const res = await fetch(`${BASE}/leads?${p}`)
   if (!res.ok) throw new Error(await res.text())
   return res.json()
@@ -113,6 +116,22 @@ export async function removeLeadFromList(listId, leadId) {
   const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/leads/${encodeURIComponent(leadId)}`, {
     method: 'DELETE',
   })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function fetchDeptStats(activite) {
+  const p = new URLSearchParams()
+  if (activite) p.set('activite', activite)
+  const res = await fetch(`${BASE}/stats/departements?${p}`)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function fetchDashboard(month) {
+  const p = new URLSearchParams()
+  if (month) p.set('month', month)
+  const res = await fetch(`${BASE}/dashboard?${p}`)
   if (!res.ok) throw new Error(await res.text())
   return res.json()
 }

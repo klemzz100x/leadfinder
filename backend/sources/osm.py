@@ -61,7 +61,7 @@ LUCRATIVE_FILTERS: dict[str, Any] = {
 # On garde une granularité utile au démarchage, pas le détail OSM complet.
 TYPE_MAP: dict[tuple[str, str], str] = {
     ("amenity", "restaurant"): "restaurant",
-    ("amenity", "fast_food"): "restaurant",
+    ("amenity", "fast_food"): "fast_food",
     ("amenity", "cafe"): "cafe_bar",
     ("amenity", "bar"): "cafe_bar",
     ("amenity", "pub"): "cafe_bar",
@@ -304,6 +304,7 @@ class OSMSource(BusinessSource):
             phone=phone,
             website=website,
             address=_build_address(tags),
+            postcode=tags.get("addr:postcode"),
             opening_hours=tags.get("opening_hours"),
             raw_tags=tags,
         )

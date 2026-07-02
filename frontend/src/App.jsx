@@ -10,6 +10,8 @@ import LeadList from './components/LeadList.jsx'
 import CategoryView from './components/CategoryView.jsx'
 import CategoryEditor from './components/CategoryEditor.jsx'
 import ListsView from './components/ListsView.jsx'
+import Dashboard from './components/Dashboard.jsx'
+import DepartementStatsView from './components/DepartementStatsView.jsx'
 
 export default function App() {
   const [city, setCity]         = useState('')
@@ -17,7 +19,8 @@ export default function App() {
   const [summary, setSummary]   = useState(null)
   const [leads, setLeads]       = useState([])
   const [types, setTypes]       = useState([])
-  const [filter, setFilter]     = useState({ temperature: '', type: '' })
+  const [filter, setFilter]     = useState({ temperature: '', type: '', showEquipped: false, showClosed: false, departements: [] })
+  const [departements, setDepartements] = useState([])
   const [error, setError]       = useState('')
 
   const [viewMode, setViewMode]                 = useState('list')
@@ -40,6 +43,7 @@ export default function App() {
     setLeads(data)
     const meta = await fetchMeta(c)
     setTypes(meta.types || [])
+    setDepartements(meta.departements || [])
   }, [filter])
 
   const handleScan = async () => {
@@ -112,6 +116,18 @@ export default function App() {
               📋 Mes Listes
               {lists.length > 0 && <span className="tab-badge">{lists.length}</span>}
             </button>
+            <button
+              className={`main-tab${tab === 'dashboard' ? ' active' : ''}`}
+              onClick={() => setTab('dashboard')}
+            >
+              📊 Dashboard
+            </button>
+            <button
+              className={`main-tab${tab === 'carte' ? ' active' : ''}`}
+              onClick={() => setTab('carte')}
+            >
+              🗺️ Carte
+            </button>
           </nav>
         </div>
 
@@ -132,7 +148,7 @@ export default function App() {
             <>
               <StatsBar summary={summary} />
               <div className="toolbar">
-                <FilterBar filter={filter} types={types} onChange={handleFilterChange} />
+                <FilterBar filter={filter} types={types} departements={departements} onChange={handleFilterChange} />
                 <div className="toolbar-divider" />
                 <div className="view-toggle">
                   <button
@@ -190,6 +206,14 @@ export default function App() {
 
       {tab === 'lists' && (
         <ListsView lists={lists} onListsChange={setLists} />
+      )}
+
+      {tab === 'dashboard' && (
+        <Dashboard onEditCategories={handleOpenEditor} />
+      )}
+
+      {tab === 'carte' && (
+        <DepartementStatsView />
       )}
 
       {categoryEditorOpen && (

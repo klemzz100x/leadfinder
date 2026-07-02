@@ -1,3 +1,5 @@
+import DepartementFilter from './DepartementFilter.jsx'
+
 const TEMPS = [
   { value: '', label: 'Toutes températures' },
   { value: 'chaud', label: '🔥 Chauds' },
@@ -6,7 +8,7 @@ const TEMPS = [
   { value: 'a_verifier', label: '❓ À vérifier' },
 ]
 
-export default function FilterBar({ filter, types, onChange }) {
+export default function FilterBar({ filter, types, departements = [], onChange }) {
   const set = (key, value) => onChange({ ...filter, [key]: value })
 
   return (
@@ -29,6 +31,30 @@ export default function FilterBar({ filter, types, onChange }) {
           <option key={t} value={t}>{t}</option>
         ))}
       </select>
+
+      <DepartementFilter
+        departements={departements}
+        selected={filter.departements || []}
+        onChange={(deps) => set('departements', deps)}
+      />
+
+      <label className="filter-toggle">
+        <input
+          type="checkbox"
+          checked={Boolean(filter.showEquipped)}
+          onChange={(e) => set('showEquipped', e.target.checked)}
+        />
+        Afficher les déjà équipés
+      </label>
+
+      <label className="filter-toggle">
+        <input
+          type="checkbox"
+          checked={Boolean(filter.showClosed)}
+          onChange={(e) => set('showClosed', e.target.checked)}
+        />
+        Afficher les fermés
+      </label>
     </div>
   )
 }
