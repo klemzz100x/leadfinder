@@ -33,6 +33,12 @@ OVERPASS_URLS = [
     "https://overpass.kumi.systems/api/interpreter",  # miroir de secours
 ]
 
+# Cadence minimale entre deux appels Overpass (tous miroirs confondus). Un
+# scan département déclenche plusieurs appels rapprochés (bbox pleine puis
+# sous-cellules) ; sans cette pause, on se fait rate-limiter (429) par
+# Overpass nous-mêmes avant même que le serveur soit réellement surchargé.
+OVERPASS_MIN_INTERVAL = 1.5
+
 # User-Agent identifiable, exigé par les ToS Nominatim/Overpass.
 USER_AGENT = "LeadFinder/0.1 (local prospecting tool; contact: clem.garnero753@gmail.com)"
 
@@ -163,6 +169,12 @@ class OSMSource(BusinessSource):
         # Verrou + horodatage pour garantir 1 req/s côté Nominatim.
         self._last_nominatim = 0.0
         self._nominatim_lock = asyncio.Lock()
+        # Idem côté Overpass : un scan département déclenche plusieurs appels
+        # rapprochés (bbox pleine + sous-cellules en cas de subdivision) —
+        # sans cadence minimale, on se fait rate-limiter (429) par Overpass
+        # nous-mêmes (observé en conditions réelles sur un scan département).
+        self._last_overpass = 0.0
+        self._overpass_lock = asyncio.Lock()
 
     @property
     def call_count(self) -> int:
@@ -327,17 +339,28 @@ class OSMSource(BusinessSource):
 
     # -- Couche réseau bas niveau ------------------------------------------
     async def _overpass_call(self, query: str) -> Optional[dict[str, Any]]:
-        """Appelle Overpass avec bascule sur miroir + retry."""
-        for url in OVERPASS_URLS:
-            self._calls += 1
-            resp = await self._request_with_retry("POST", url, data={"data": query}, max_retries=2)
-            if resp is not None:
-                try:
-                    return resp.json()
-                except Exception:  # réponse non-JSON (HTML d'erreur)
-                    log.warning("Réponse Overpass non-JSON depuis %s", url)
-                    continue
-        return None
+        """Appelle Overpass avec cadence minimale, bascule sur miroir + retry."""
+        async with self._overpass_lock:
+            now = asyncio.get_event_loop().time()
+            wait = OVERPASS_MIN_INTERVAL - (now - self._last_overpass)
+            if wait > 0:
+                await asyncio.sleep(wait)
+            try:
+                for url in OVERPASS_URLS:
+                    self._calls += 1
+                    # max_retries=4 (au lieu de 2) : un 429 mérite un backoff plus
+                    # patient (2s/4s/8s) qu'un vrai serveur injoignable, plutôt que
+                    # d'abandonner ce miroir après une seule courte tentative.
+                    resp = await self._request_with_retry("POST", url, data={"data": query}, max_retries=4)
+                    if resp is not None:
+                        try:
+                            return resp.json()
+                        except Exception:  # réponse non-JSON (HTML d'erreur)
+                            log.warning("Réponse Overpass non-JSON depuis %s", url)
+                            continue
+                return None
+            finally:
+                self._last_overpass = asyncio.get_event_loop().time()
 
     async def _request_with_retry(
         self,

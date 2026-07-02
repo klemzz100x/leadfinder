@@ -3,9 +3,11 @@ doit se rabattre sur une subdivision en sous-cellules plutôt que d'abandonner
 toute la zone — reproduit un 504 Gateway Timeout observé en production sur
 un scan département (l'Ain)."""
 
+import time
+
 import pytest
 
-from backend.sources.osm import OSMSource
+from backend.sources.osm import OSMSource, OVERPASS_MIN_INTERVAL
 
 
 @pytest.mark.asyncio
@@ -74,3 +76,49 @@ async def test_fetch_bbox_recursive_still_splits_on_truncated_response():
 
     assert len(calls) == 5
     assert len(elements) == 4
+
+
+@pytest.mark.asyncio
+async def test_overpass_call_paced_between_consecutive_calls():
+    """Régression : observé en prod, des appels Overpass rapprochés (bbox
+    pleine + sous-cellules) se faisaient rate-limiter (429) faute de cadence
+    minimale — Nominatim était throttlé à 1 req/s mais pas Overpass."""
+    source = OSMSource()
+
+    async def fake_request_with_retry(method, url, **kwargs):
+        class FakeResp:
+            status_code = 200
+            def json(self):
+                return {"elements": []}
+        return FakeResp()
+
+    source._request_with_retry = fake_request_with_retry
+    try:
+        t0 = time.monotonic()
+        await source._overpass_call("query1")
+        await source._overpass_call("query2")
+        elapsed = time.monotonic() - t0
+    finally:
+        await source.aclose()
+
+    assert elapsed >= OVERPASS_MIN_INTERVAL - 0.05
+
+
+@pytest.mark.asyncio
+async def test_overpass_call_uses_patient_retry_budget():
+    """Un 429 mérite un backoff plus patient (4 tentatives) qu'un abandon
+    rapide — le budget de retry ne doit pas être réduit à 2 sur Overpass."""
+    source = OSMSource()
+    captured = {}
+
+    async def fake_request_with_retry(method, url, **kwargs):
+        captured["max_retries"] = kwargs.get("max_retries")
+        return None
+
+    source._request_with_retry = fake_request_with_retry
+    try:
+        await source._overpass_call("query")
+    finally:
+        await source.aclose()
+
+    assert captured["max_retries"] == 4

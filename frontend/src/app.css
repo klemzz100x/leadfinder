@@ -1649,6 +1649,7 @@ main { flex: 1; }
 }
 .batch-scan-row.batch-scan-running { background: rgba(59, 130, 246, 0.1); }
 .batch-scan-row.batch-scan-ok { background: rgba(34, 197, 94, 0.08); }
+.batch-scan-row.batch-scan-empty { background: rgba(234, 179, 8, 0.1); }
 .batch-scan-row.batch-scan-error { background: rgba(239, 68, 68, 0.1); }
 .batch-scan-icon { flex-shrink: 0; }
 .batch-scan-name { flex: 1; color: var(--text); }
