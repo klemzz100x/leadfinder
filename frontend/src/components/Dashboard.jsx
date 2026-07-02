@@ -24,6 +24,27 @@ export default function Dashboard({ onEditCategories, onEditCreneaux }) {
 
   return (
     <div className="dashboard-view">
+      {/* Le plus important en premier : combien de gens on a appelés, quelle
+          part a reçu un devis, et le CA potentiel si tout se signe. */}
+      <div className="dashboard-funnel">
+        <div className="dashboard-funnel-kpi">
+          <span className="dashboard-funnel-value">{data.total_appeles}</span>
+          <span className="dashboard-funnel-label">📞 Leads appelés</span>
+        </div>
+        <span className="dashboard-funnel-arrow">→</span>
+        <div className="dashboard-funnel-kpi">
+          <span className="dashboard-funnel-value">{data.taux_devis}%</span>
+          <span className="dashboard-funnel-label">📄 Devis envoyés ({data.devis_envoyes})</span>
+        </div>
+        <span className="dashboard-funnel-arrow">→</span>
+        <div className="dashboard-funnel-kpi dashboard-funnel-kpi-highlight">
+          <span className="dashboard-funnel-value">{fmtEuros(data.ca_potentiel)}</span>
+          <span className="dashboard-funnel-label" title="Montants proposés (devis en cours) + montants finaux (déjà closés)">
+            💰 CA potentiel si 100% des devis signés
+          </span>
+        </div>
+      </div>
+
       <div className="dashboard-kpis">
         <div className="dashboard-kpi">
           <span className="dashboard-kpi-value">{data.closes_ce_mois}</span>

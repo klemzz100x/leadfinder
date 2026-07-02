@@ -1814,6 +1814,40 @@ main { flex: 1; }
 
 .dashboard-view { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 1.25rem; }
 
+/* Funnel principal (appelés -> devis -> CA potentiel) : la donnée la plus
+   importante, mise en avant en tête du dashboard avant tout le reste. */
+.dashboard-funnel {
+  display: flex;
+  align-items: stretch;
+  gap: 1rem;
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow);
+  flex-wrap: wrap;
+}
+.dashboard-funnel-kpi {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 160px;
+}
+.dashboard-funnel-value { font-size: 2.1rem; font-weight: 800; line-height: 1; }
+.dashboard-funnel-label { font-size: 0.82rem; color: var(--muted); font-weight: 600; }
+.dashboard-funnel-arrow {
+  align-self: center;
+  font-size: 1.5rem;
+  color: var(--muted);
+}
+.dashboard-funnel-kpi-highlight .dashboard-funnel-value { color: #22c55e; }
+
+@media (max-width: 640px) {
+  .dashboard-funnel { flex-direction: column; }
+  .dashboard-funnel-arrow { transform: rotate(90deg); align-self: flex-start; margin-left: 1rem; }
+}
+
 .dashboard-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));

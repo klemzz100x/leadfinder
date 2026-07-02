@@ -783,6 +783,45 @@ class LeadStore:
 
     # ── Dashboard commercial (tous les prospect_lists confondus) ────────────────
 
+    async def get_pipeline_funnel(self) -> dict[str, Any]:
+        """Vue d'ensemble du pipeline, tous-listes, un lead compté une seule
+        fois (statut le plus avancé si présent dans plusieurs listes) :
+        combien de leads ont été appelés (tout statut sauf 'a_contacter'),
+        quelle part a reçu un devis, et le CA potentiel si 100% des devis
+        déjà envoyés étaient signés (montant final si déjà closé, sinon
+        montant proposé) — mise en avant demandée en tête du dashboard."""
+        rows = await self.pool.fetch("""
+            SELECT DISTINCT ON (lead_id) status, budget_propose, budget_final
+            FROM list_leads
+            ORDER BY lead_id, CASE status
+                WHEN 'facture_payee' THEN 6
+                WHEN 'closing' THEN 5
+                WHEN 'devis_relance' THEN 4
+                WHEN 'devis_envoye' THEN 4
+                WHEN 'pas_interesse' THEN 2
+                WHEN 'injoignable' THEN 2
+                WHEN 'repondeur' THEN 1
+                WHEN 'rappel' THEN 1
+                ELSE 0
+            END DESC
+        """)
+
+        _DEVIS_OU_PLUS = {'devis_envoye', 'devis_relance', 'closing', 'facture_payee'}
+        total_appeles = sum(1 for r in rows if r["status"] != 'a_contacter')
+        devis_envoyes = sum(1 for r in rows if r["status"] in _DEVIS_OU_PLUS)
+        ca_potentiel = sum(
+            (r["budget_final"] if r["status"] in _CLOSED_STATUSES else r["budget_propose"]) or 0.0
+            for r in rows if r["status"] in _DEVIS_OU_PLUS
+        )
+        taux_devis = round(devis_envoyes / total_appeles * 100, 1) if total_appeles else 0.0
+
+        return {
+            "total_appeles": total_appeles,
+            "devis_envoyes": devis_envoyes,
+            "taux_devis": taux_devis,
+            "ca_potentiel": round(ca_potentiel, 2),
+        }
+
     async def get_dashboard_stats(self, month: Optional[str] = None) -> dict[str, Any]:
         """Agrégation gamifiée tous-listes : closes/CA du mois par catégorie,
         classement, streak de jours consécutifs avec au moins un closing.
@@ -847,6 +886,7 @@ class LeadStore:
             })
         categories_out.sort(key=lambda c: c["ca_reel"], reverse=True)
         categorie_top = categories_out[0]["name"] if categories_out and categories_out[0]["ca_reel"] > 0 else None
+        funnel = await self.get_pipeline_funnel()
 
         return {
             "month": target_month,
@@ -855,4 +895,5 @@ class LeadStore:
             "streak_jours": _compute_streak(closing_days),
             "categorie_top": categorie_top,
             "categories": categories_out,
+            **funnel,
         }
