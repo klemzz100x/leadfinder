@@ -360,7 +360,7 @@ export default function App() {
       )}
 
       {tab === 'lists' && (
-        <ListsView lists={lists} onListsChange={setLists} />
+        <ListsView lists={lists} onListsChange={setLists} creneauxMap={creneauxMap} />
       )}
 
       {tab === 'rappels' && <RappelsView />}

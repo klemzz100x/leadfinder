@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { googleMapsUrl } from '../utils.js'
 import { CONTACT_STATUS_COLOR } from '../statusColors.js'
 import { USERS } from '../identity.js'
+import CreneauButton from './CreneauButton.jsx'
 
 export const STATUSES = [
   { value: 'a_contacter',   label: 'À contacter',   color: '#60a5fa' },
@@ -17,7 +18,7 @@ export const STATUSES = [
 
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.value, s]))
 
-export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesChange, onBudgetChange, onAssignChange }) {
+export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesChange, onBudgetChange, onAssignChange, creneau }) {
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState(lead.list_notes || '')
   const [saving, setSaving] = useState(false)
@@ -60,6 +61,7 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
             ? <a href={`tel:${lead.phone}`}>📞 {lead.phone}</a>
             : <span className="llr-no-phone">Pas de tél.</span>
           }
+          <CreneauButton creneau={creneau} businessType={lead.business_type} />
         </div>
         {(group === 'devis' || group === 'won') && (
           <div className="llr-budget-col">

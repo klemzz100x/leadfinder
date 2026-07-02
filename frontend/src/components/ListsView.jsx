@@ -16,7 +16,7 @@ export const PRIORITES = [
 ]
 const PRIORITE_MAP = Object.fromEntries(PRIORITES.map(p => [p.value, p]))
 
-export default function ListsView({ lists, onListsChange }) {
+export default function ListsView({ lists, onListsChange, creneauxMap }) {
   const [selected, setSelected]     = useState(null)
   const [listLeads, setListLeads]   = useState([])
   const [stats, setStats]           = useState(null)
@@ -262,6 +262,7 @@ export default function ListsView({ lists, onListsChange }) {
                   onNotesChange={notes => handleNotes(lead, notes)}
                   onBudgetChange={fields => handleBudget(lead, fields)}
                   onAssignChange={assignedTo => handleAssign(lead, assignedTo)}
+                  creneau={creneauxMap?.[lead.business_type]}
                 />
               ))}
             </div>
