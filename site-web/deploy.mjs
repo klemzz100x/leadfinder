@@ -9,30 +9,45 @@
 //   node deploy.mjs --list
 //   node deploy.mjs --delete <slug>
 //
-// Auth : variables d'environnement CLOUDFLARE_API_TOKEN et
-// CLOUDFLARE_ACCOUNT_ID (jamais en dur dans le code — voir README.md).
+// Auth : soit CLOUDFLARE_API_TOKEN (+ CLOUDFLARE_ACCOUNT_ID) en variable
+// d'environnement (jamais en dur dans le code — usage headless/CI), soit une
+// session OAuth déjà active (`npx wrangler login`, pratique pour un usage
+// manuel ponctuel) — voir README.md.
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 
-function requireEnv(name) {
-  const v = process.env[name];
-  if (!v) {
-    console.error(`Variable d'environnement ${name} manquante. Voir site-web/README.md (section déploiement).`);
-    process.exit(1);
-  }
-  return v;
-}
-
-function run(cmd, args, { capture = false } = {}) {
+function run(cmd, args, { capture = false, cwd } = {}) {
   const res = spawnSync(cmd, args, {
     encoding: 'utf-8',
     shell: true, // npm/npx sont des .cmd sur Windows — shell:true les résout partout
     stdio: capture ? ['ignore', 'pipe', 'pipe'] : 'inherit',
     env: process.env,
+    cwd,
   });
   return res;
+}
+
+// Accepte soit un token API en env var, soit une session OAuth déjà active
+// (`wrangler whoami` réussit alors sans CLOUDFLARE_API_TOKEN). Averti mais ne
+// bloque pas si CLOUDFLARE_ACCOUNT_ID est absent : wrangler le résout tout
+// seul via la session quand le compte est sans ambiguïté.
+function ensureAuth() {
+  if (!process.env.CLOUDFLARE_ACCOUNT_ID) {
+    console.warn("CLOUDFLARE_ACCOUNT_ID non défini — wrangler tentera de le déduire de la session active.");
+  }
+  if (process.env.CLOUDFLARE_API_TOKEN) return;
+
+  const who = run('npx', ['wrangler', 'whoami'], { capture: true });
+  if (who.status !== 0 || !/logged in/i.test(`${who.stdout}${who.stderr}`)) {
+    console.error(
+      "Aucune authentification Cloudflare détectée.\n" +
+      "Soit exporter CLOUDFLARE_API_TOKEN (+ CLOUDFLARE_ACCOUNT_ID), soit lancer `npx wrangler login`.\n" +
+      "Voir site-web/README.md (section déploiement)."
+    );
+    process.exit(1);
+  }
 }
 
 function slugify(name) {
@@ -83,11 +98,11 @@ function resolveStaticDir(inputDir) {
   }
   if (!fs.existsSync(path.join(inputDir, 'node_modules'))) {
     console.log('Installation des dépendances…');
-    const install = run('npm', ['install'], { capture: false });
+    const install = run('npm', ['install'], { capture: false, cwd: inputDir });
     if (install.status !== 0) throw new Error("Échec de l'installation des dépendances.");
   }
   console.log('Build du site…');
-  const build = run('npm', ['run', 'build'], { capture: false });
+  const build = run('npm', ['run', 'build'], { capture: false, cwd: inputDir });
   if (build.status !== 0) throw new Error('Le build a échoué.');
 
   const distDir = path.join(inputDir, 'dist');
@@ -98,8 +113,7 @@ function resolveStaticDir(inputDir) {
 }
 
 function deploy(inputDir, name, { fresh = false, json = false } = {}) {
-  requireEnv('CLOUDFLARE_API_TOKEN');
-  requireEnv('CLOUDFLARE_ACCOUNT_ID');
+  ensureAuth();
 
   const baseSlug = slugify(name);
   if (!baseSlug) throw new Error(`Nom invalide : "${name}" ne produit aucun slug exploitable.`);
@@ -128,8 +142,7 @@ function deploy(inputDir, name, { fresh = false, json = false } = {}) {
 const args = process.argv.slice(2);
 
 if (args[0] === '--list') {
-  requireEnv('CLOUDFLARE_API_TOKEN');
-  requireEnv('CLOUDFLARE_ACCOUNT_ID');
+  ensureAuth();
   run('npx', ['wrangler', 'pages', 'project', 'list']);
   process.exit(0);
 }
@@ -140,8 +153,7 @@ if (args[0] === '--delete') {
     console.error('Usage : node deploy.mjs --delete <slug>');
     process.exit(1);
   }
-  requireEnv('CLOUDFLARE_API_TOKEN');
-  requireEnv('CLOUDFLARE_ACCOUNT_ID');
+  ensureAuth();
   // Pas de --yes documenté de façon fiable : laissé interactif (stdio hérité)
   // pour que la confirmation éventuelle de wrangler reste visible.
   run('npx', ['wrangler', 'pages', 'project', 'delete', slug]);
