@@ -325,6 +325,43 @@ main { flex: 1; }
   gap: 0.45rem;
 }
 
+.lead-list-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  padding: 0.5rem 0.2rem;
+}
+.lead-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.lead-bulk-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.lead-bulk-count {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+.lead-select-checkbox {
+  display: block;
+  margin-bottom: 0.4rem;
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 /* ── Lead card ── */
 .lead-card {
   display: grid;

@@ -2,10 +2,15 @@ import { useState, useEffect, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { addLeadsToList, createList } from '../api.js'
 
-export default function AddToListBtn({ lead, lists, onAdded, onListCreated }) {
+// `lead` (un seul lead) ou `leadIds` (ajout groupé depuis une sélection
+// multiple) — un seul des deux est nécessaire, `leadIds` prime si fourni.
+export default function AddToListBtn({ lead, leadIds, lists, onAdded, onListCreated, label }) {
+  const ids = leadIds || (lead ? [lead.id] : [])
+  const isBulk = ids.length > 1
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(null)
   const [done, setDone] = useState(null)
+  const [doneCount, setDoneCount] = useState(0)
   const [duplicate, setDuplicate] = useState(null)
   const [pos, setPos] = useState(null)
   const [creating, setCreating] = useState(false)
@@ -40,13 +45,15 @@ export default function AddToListBtn({ lead, lists, onAdded, onListCreated }) {
   }
 
   const handleAdd = async (list) => {
+    if (ids.length === 0) return
     setAdding(list.id)
     setDuplicate(null)
     try {
-      const res = await addLeadsToList(list.id, [lead.id])
+      const res = await addLeadsToList(list.id, ids)
       if (res.added > 0) {
         setDone(list.id)
-        onAdded?.(list)
+        setDoneCount(res.added)
+        onAdded?.(list, res.added)
         setTimeout(() => { setDone(null); setOpen(false) }, 900)
       } else {
         // Doublon (même nom+adresse déjà dans cette liste) : pas d'ajout,
@@ -64,15 +71,16 @@ export default function AddToListBtn({ lead, lists, onAdded, onListCreated }) {
   const handleCreateAndAdd = async (e) => {
     e.preventDefault()
     const name = newListName.trim()
-    if (!name) return
+    if (!name || ids.length === 0) return
     setSavingNew(true)
     try {
       const list = await createList(name)
-      await addLeadsToList(list.id, [lead.id])
-      onListCreated?.({ ...list, lead_count: 1 })
+      const res = await addLeadsToList(list.id, ids)
+      onListCreated?.({ ...list, lead_count: res.added || 0 })
       setNewListName('')
       setCreating(false)
       setDone(list.id)
+      setDoneCount(res.added || 0)
       setTimeout(() => { setDone(null); setOpen(false) }, 900)
     } catch (e) {
       console.error(e)
@@ -87,9 +95,10 @@ export default function AddToListBtn({ lead, lists, onAdded, onListCreated }) {
         ref={btnRef}
         className="btn-add-list"
         onClick={toggleOpen}
-        title="Ajouter à une liste"
+        disabled={ids.length === 0}
+        title={isBulk ? `Ajouter ces ${ids.length} leads à une liste` : 'Ajouter à une liste'}
       >
-        + Liste
+        {label || (isBulk ? `+ Liste (${ids.length})` : '+ Liste')}
       </button>
       {open && pos && createPortal(
         <div
@@ -97,7 +106,9 @@ export default function AddToListBtn({ lead, lists, onAdded, onListCreated }) {
           ref={dropdownRef}
           style={{ position: 'fixed', top: pos.top, right: pos.right }}
         >
-          <div className="atl-header">Ajouter à une liste</div>
+          <div className="atl-header">
+            {isBulk ? `Ajouter ${ids.length} leads à une liste` : 'Ajouter à une liste'}
+          </div>
           {(!lists || lists.length === 0) && !creating && (
             <p className="atl-empty-hint">Aucune liste pour l'instant.</p>
           )}
@@ -109,7 +120,7 @@ export default function AddToListBtn({ lead, lists, onAdded, onListCreated }) {
               disabled={!!adding}
               title={duplicate === list.id ? 'Déjà présent dans cette liste' : undefined}
             >
-              {done === list.id && '✓ '}
+              {done === list.id && `✓ ${isBulk ? `${doneCount} ajoutés` : ''} `}
               {duplicate === list.id ? '⚠ Déjà présent' : list.name}
               <span className="atl-count">{list.lead_count}</span>
             </button>

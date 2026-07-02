@@ -28,7 +28,7 @@ function websiteHostname(website) {
   }
 }
 
-export default function LeadRow({ lead, onUpdate, lists, onListsChange }) {
+export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected, onToggleSelect }) {
   const [called, setCalled]       = useState(Boolean(lead.called))
   const [saving, setSaving]       = useState(false)
   const [showNotes, setShowNotes] = useState(false)
@@ -57,8 +57,17 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange }) {
   return (
     <>
       <div className={`lead-card temp-${lead.temperature}`}>
-        {/* Colonne 1 / Ligne 1 : badge température */}
+        {/* Colonne 1 / Ligne 1 : case à cocher + badge température */}
         <div className="lead-card-badge">
+          {onToggleSelect && (
+            <input
+              type="checkbox"
+              className="lead-select-checkbox"
+              checked={Boolean(selected)}
+              onChange={() => onToggleSelect(lead.id)}
+              title="Sélectionner ce lead"
+            />
+          )}
           <span className={`temp-pill temp-${lead.temperature}`}>
             {TEMP_ICON[lead.temperature] || '?'}{' '}
             {TEMP_LABEL[lead.temperature] || lead.temperature}
