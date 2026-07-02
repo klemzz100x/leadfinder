@@ -17,6 +17,7 @@ env/
 *.db-shm
 *.db-wal
 categories.json
+creneaux.json
 
 # Config locale
 .env

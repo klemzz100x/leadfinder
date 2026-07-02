@@ -450,6 +450,19 @@ main { flex: 1; }
   background: rgba(124, 58, 237, 0.06);
 }
 
+/* Créneau d'appel indicatif — visible mais volontairement plus discret que
+   "Déjà appelé" (indication de priorisation, pas une alerte). */
+.creneau-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent);
+  border: 1px solid rgba(59, 130, 246, 0.3);
+}
+
 /* Card row 2: score | phone + actions */
 .lead-card-score-col {
   grid-column: 1 / 3;

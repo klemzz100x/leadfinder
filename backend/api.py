@@ -20,6 +20,7 @@ from pydantic import BaseModel, model_validator
 
 from .audit import audit_url
 from .categories import load_categories, save_categories, types_to_category
+from .creneaux import load_familles, save_familles, types_to_creneau
 from .departements import DEPARTEMENT_CENTROIDS, DEPARTEMENTS
 from .pipeline import ScanSummary, scan_city, scan_departement
 from .sources.osm import USER_AGENT
@@ -85,6 +86,15 @@ class CategoryDef(BaseModel):
 
 class CategoriesRequest(BaseModel):
     categories: dict[str, CategoryDef]
+
+
+class FamilleDef(BaseModel):
+    types: list[str]
+    creneau: str = ""
+
+
+class FamillesRequest(BaseModel):
+    familles: dict[str, FamilleDef]
 
 
 class CreateListRequest(BaseModel):
@@ -440,6 +450,26 @@ async def put_categories(req: CategoriesRequest) -> dict:
     """Sauvegarde les catégories métier dans categories.json."""
     save_categories({name: c.model_dump() for name, c in req.categories.items()})
     return {"ok": True}
+
+
+@app.get("/api/creneaux")
+async def get_creneaux() -> dict[str, dict]:
+    """Familles de secteur avec leur créneau d'appel indicatif (éditable)."""
+    return load_familles()
+
+
+@app.put("/api/creneaux")
+async def put_creneaux(req: FamillesRequest) -> dict:
+    """Sauvegarde les familles/créneaux dans creneaux.json."""
+    save_familles({name: f.model_dump() for name, f in req.familles.items()})
+    return {"ok": True}
+
+
+@app.get("/api/creneaux/map")
+async def get_creneaux_map() -> dict[str, str]:
+    """business_type -> créneau indicatif, à plat — pour l'affichage en badge
+    sur les cards sans dupliquer la logique de résolution côté frontend."""
+    return types_to_creneau(load_familles())
 
 
 @app.get("/api/stats/departements")

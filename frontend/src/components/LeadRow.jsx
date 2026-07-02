@@ -28,7 +28,7 @@ function websiteHostname(website) {
   }
 }
 
-export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected, onToggleSelect }) {
+export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected, onToggleSelect, creneau }) {
   const [called, setCalled]       = useState(Boolean(lead.called))
   const [saving, setSaving]       = useState(false)
   const [showNotes, setShowNotes] = useState(false)
@@ -93,6 +93,11 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
           {alreadyContacted && (
             <span className="already-called-badge" title="Déjà contacté dans une liste — vérifier avant de rappeler">
               ☎️ Déjà appelé
+            </span>
+          )}
+          {creneau && (
+            <span className="creneau-badge" title="Créneau indicatif, à ajuster selon retour terrain — n'empêche pas d'appeler en dehors">
+              📞 {creneau}
             </span>
           )}
           <span className={`web-badge status-${lead.web_status}`}>

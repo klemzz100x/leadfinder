@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import {
   scanArea, fetchLeads, fetchMeta, fetchRawTypes, fetchDepartements, exportCsvUrl,
-  fetchCategories, fetchLists, fetchRappels,
+  fetchCategories, fetchLists, fetchRappels, fetchCreneaux, fetchCreneauxMap,
 } from './api.js'
 import { mergeScanSummaries } from './utils.js'
 import SearchBar from './components/SearchBar.jsx'
@@ -10,6 +10,7 @@ import FilterBar from './components/FilterBar.jsx'
 import LeadList from './components/LeadList.jsx'
 import CategoryView from './components/CategoryView.jsx'
 import CategoryEditor from './components/CategoryEditor.jsx'
+import CreneauxEditor from './components/CreneauxEditor.jsx'
 import ListsView from './components/ListsView.jsx'
 import RappelsView from './components/RappelsView.jsx'
 import Dashboard from './components/Dashboard.jsx'
@@ -36,6 +37,9 @@ export default function App() {
   const [categoriesLoaded, setCategoriesLoaded] = useState(false)
   const [categoryEditorOpen, setCategoryEditorOpen] = useState(false)
   const [rawTypes, setRawTypes]                 = useState([])
+  const [familles, setFamilles]                 = useState({})
+  const [famillesLoaded, setFamillesLoaded]     = useState(false)
+  const [creneauxEditorOpen, setCreneauxEditorOpen] = useState(false)
 
   // Onglet principal
   const [tab, setTab] = useState('search')
@@ -43,12 +47,14 @@ export default function App() {
   // Listes partagées
   const [lists, setLists] = useState([])
   const [rappelsCount, setRappelsCount] = useState(0)
+  const [creneauxMap, setCreneauxMap] = useState({})
 
   useEffect(() => {
     fetchLists().then(setLists)
     fetchDepartements().then(setDepartements)
     fetchMeta().then((meta) => setTypes(meta.types || []))
     fetchRappels().then((r) => setRappelsCount(r.length))
+    fetchCreneauxMap().then(setCreneauxMap)
   }, [])
 
   // Badge de l'onglet à jour même si l'utilisateur ne l'a pas ouvert
@@ -156,6 +162,15 @@ export default function App() {
     // catégories déjà groupées, impropres à l'édition des catégories elles-mêmes.
     setRawTypes(await fetchRawTypes())
     setCategoryEditorOpen(true)
+  }
+
+  const handleOpenCreneauxEditor = async () => {
+    if (!famillesLoaded) {
+      setFamilles(await fetchCreneaux())
+      setFamillesLoaded(true)
+    }
+    setRawTypes(await fetchRawTypes())
+    setCreneauxEditorOpen(true)
   }
 
   return (
@@ -324,6 +339,7 @@ export default function App() {
                 onUpdate={handleLeadUpdate}
                 lists={lists}
                 onListsChange={setLists}
+                creneauxMap={creneauxMap}
               />
             )}
             {viewMode === 'categories' && leads.length > 0 && (
@@ -350,11 +366,11 @@ export default function App() {
       {tab === 'rappels' && <RappelsView />}
 
       {tab === 'dashboard' && (
-        <Dashboard onEditCategories={handleOpenEditor} />
+        <Dashboard onEditCategories={handleOpenEditor} onEditCreneaux={handleOpenCreneauxEditor} />
       )}
 
       {tab === 'carte' && (
-        <DepartementStatsView lists={lists} onListsChange={setLists} />
+        <DepartementStatsView lists={lists} onListsChange={setLists} creneauxMap={creneauxMap} />
       )}
 
       {categoryEditorOpen && (
@@ -363,6 +379,18 @@ export default function App() {
           types={rawTypes}
           onClose={() => setCategoryEditorOpen(false)}
           onSave={setCategories}
+        />
+      )}
+
+      {creneauxEditorOpen && (
+        <CreneauxEditor
+          familles={familles}
+          types={rawTypes}
+          onClose={() => setCreneauxEditorOpen(false)}
+          onSave={(fams) => {
+            setFamilles(fams)
+            fetchCreneauxMap().then(setCreneauxMap)
+          }}
         />
       )}
     </div>

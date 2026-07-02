@@ -96,6 +96,28 @@ export async function saveCategories(categories) {
   return res.json()
 }
 
+export async function fetchCreneaux() {
+  const res = await fetch(`${BASE}/creneaux`)
+  if (!res.ok) return {}
+  return res.json()
+}
+
+export async function saveCreneaux(familles) {
+  const res = await fetch(`${BASE}/creneaux`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ familles }),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function fetchCreneauxMap() {
+  const res = await fetch(`${BASE}/creneaux/map`)
+  if (!res.ok) return {}
+  return res.json()
+}
+
 export async function fetchLists() {
   const res = await fetch(`${BASE}/lists`)
   if (!res.ok) return []

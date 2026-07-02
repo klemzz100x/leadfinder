@@ -120,7 +120,7 @@ function ZoomWatcher({ onViewportChange }) {
   return null
 }
 
-export default function FranceMap({ villeStats, activite, selectedVille, onSelectVille, lists, onListsChange }) {
+export default function FranceMap({ villeStats, activite, selectedVille, onSelectVille, lists, onListsChange, creneauxMap }) {
   const [viewport, setViewport] = useState({ drilledIn: false, bounds: null })
   const [preciseLeads, setPreciseLeads] = useState([])
   // Distinct de `preciseLeads.length > 0` : une zone dézoomée-puis-zoomée peut
@@ -196,7 +196,7 @@ export default function FranceMap({ villeStats, activite, selectedVille, onSelec
         >
           <Tooltip>{lead.name}</Tooltip>
           <Popup minWidth={240}>
-            <LeadMapPopup lead={lead} lists={lists} onListsChange={onListsChange} />
+            <LeadMapPopup lead={lead} lists={lists} onListsChange={onListsChange} creneau={creneauxMap?.[lead.business_type]} />
           </Popup>
         </CircleMarker>
         )

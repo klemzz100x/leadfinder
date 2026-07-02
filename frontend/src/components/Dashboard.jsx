@@ -5,7 +5,7 @@ function fmtEuros(n) {
   return `${Math.round(n).toLocaleString('fr-FR')} €`
 }
 
-export default function Dashboard({ onEditCategories }) {
+export default function Dashboard({ onEditCategories, onEditCreneaux }) {
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -46,6 +46,7 @@ export default function Dashboard({ onEditCategories }) {
       <div className="dashboard-toolbar">
         <h3>Objectifs par catégorie — {data.month}</h3>
         <button className="btn btn-cat-editor" onClick={onEditCategories}>⚙ Éditer les objectifs</button>
+        <button className="btn btn-cat-editor" onClick={onEditCreneaux}>📞 Éditer les créneaux d'appel</button>
       </div>
 
       <div className="dashboard-categories">

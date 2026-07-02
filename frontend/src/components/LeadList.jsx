@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import LeadRow from './LeadRow.jsx'
 import AddToListBtn from './AddToListBtn.jsx'
 
-export default function LeadList({ leads, onUpdate, lists, onListsChange }) {
+export default function LeadList({ leads, onUpdate, lists, onListsChange, creneauxMap }) {
   const [selected, setSelected] = useState(() => new Set())
 
   // Clé stable basée sur l'ensemble des ids affichés, pas sur la référence du
@@ -75,6 +75,7 @@ export default function LeadList({ leads, onUpdate, lists, onListsChange }) {
           onListsChange={onListsChange}
           selected={selected.has(lead.id)}
           onToggleSelect={toggleSelect}
+          creneau={creneauxMap?.[lead.business_type]}
         />
       ))}
     </div>

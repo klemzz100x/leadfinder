@@ -9,7 +9,7 @@ function normalizeWebsiteUrl(website) {
   return website.startsWith('http') ? website : `https://${website}`
 }
 
-export default function LeadMapPopup({ lead, lists, onListsChange }) {
+export default function LeadMapPopup({ lead, lists, onListsChange, creneau }) {
   const website = lead.website || lead.gmaps_website
   const closedPermanently = lead.gmaps_status === 'closed_permanently'
 
@@ -28,6 +28,11 @@ export default function LeadMapPopup({ lead, lists, onListsChange }) {
           </span>
         )}
         {closedPermanently && <span className="gmaps-badge gmaps-closed">⛔ Fermé définitivement</span>}
+        {creneau && (
+          <span className="creneau-badge" title="Créneau indicatif, à ajuster selon retour terrain — n'empêche pas d'appeler en dehors">
+            📞 {creneau}
+          </span>
+        )}
       </div>
 
       <div className="map-popup-name">{lead.name}</div>

@@ -6,7 +6,7 @@ import BatchScanPanel from './BatchScanPanel.jsx'
 import FranceMap from './FranceMap.jsx'
 import EstimatedRevenue from './EstimatedRevenue.jsx'
 
-export default function DepartementStatsView({ lists, onListsChange }) {
+export default function DepartementStatsView({ lists, onListsChange, creneauxMap }) {
   const [categories, setCategories] = useState({})
   const [activite, setActivite] = useState('')
   const [departements, setDepartements] = useState([])
@@ -117,6 +117,7 @@ export default function DepartementStatsView({ lists, onListsChange }) {
             onSelectVille={setSelected}
             lists={lists}
             onListsChange={onListsChange}
+            creneauxMap={creneauxMap}
           />
 
           <div className="dept-stats-list">
