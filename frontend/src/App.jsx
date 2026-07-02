@@ -204,7 +204,23 @@ export default function App() {
               </p>
             )}
             {resultsLoaded && leads.length === 0 && !scanning && (
-              <p className="empty">Aucun lead pour ces filtres.</p>
+              <div className="dept-stats-empty">
+                {!city.trim() && filter.departements.length > 0 ? (
+                  <>
+                    <p>
+                      Aucun lead pour {filter.departements
+                        .map((code) => departements.find((d) => d.code === code)?.name || code)
+                        .join(', ')} — ce département n'a peut-être jamais été scanné.
+                    </p>
+                    <DeptScanEstimate codes={filter.departements} />
+                    <button className="btn btn-scan" onClick={handleScan}>
+                      🔍 Scanner {filter.departements.length > 1 ? 'ces départements' : 'ce département'}
+                    </button>
+                  </>
+                ) : (
+                  <p>Aucun lead pour ces filtres.</p>
+                )}
+              </div>
             )}
             {viewMode === 'list' && (
               <LeadList
