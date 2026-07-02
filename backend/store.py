@@ -67,6 +67,10 @@ _ALTER_STATEMENTS = [
     "ALTER TABLE list_leads ADD COLUMN IF NOT EXISTS budget_final REAL",
     # ── Usage partagé (Daniel/Clément) : visibilité, pas séparation des données ──
     "ALTER TABLE list_leads ADD COLUMN IF NOT EXISTS assigned_to TEXT",
+    # ── Assignation + priorité au niveau de la liste elle-même (pas seulement
+    # par lead) : qui suit cette liste, et son urgence relative ──
+    "ALTER TABLE prospect_lists ADD COLUMN IF NOT EXISTS assigned_to TEXT",
+    "ALTER TABLE prospect_lists ADD COLUMN IF NOT EXISTS priorite TEXT",
 ]
 
 # Historique des scans (ville ou département) — évite qu'un scan déjà fait
@@ -229,6 +233,8 @@ class LeadStore:
         city: Optional[str] = None,
         temperature: Optional[str] = None,
         business_type: Optional[str] = None,
+        business_types: Optional[list[str]] = None,
+        exclude_business_types: Optional[list[str]] = None,
         show_equipped: bool = False,
         show_closed: bool = False,
         departements: Optional[list[str]] = None,
@@ -237,23 +243,59 @@ class LeadStore:
         values: list[Any] = []
         if city:
             values.append(city)
-            conditions.append(f"LOWER(city) = LOWER(${len(values)})")
+            conditions.append(f"LOWER(l.city) = LOWER(${len(values)})")
         if temperature:
             values.append(temperature)
-            conditions.append(f"temperature = ${len(values)}")
-        if business_type:
+            conditions.append(f"l.temperature = ${len(values)}")
+        # `business_types` (catégorie résolue en plusieurs types bruts) prime
+        # sur `business_type` (valeur brute unique, conservé pour compat) si
+        # les deux sont fournis.
+        if business_types:
+            values.append(business_types)
+            conditions.append(f"l.business_type = ANY(${len(values)})")
+        elif business_type:
             values.append(business_type)
-            conditions.append(f"business_type = ${len(values)}")
+            conditions.append(f"l.business_type = ${len(values)}")
+        # Catégorie "Autres" (filtre) : tout business_type non couvert par une
+        # catégorie connue plutôt qu'une recherche exacte sur "Autres" (qui ne
+        # correspondrait à aucun lead réel).
+        if exclude_business_types:
+            values.append(exclude_business_types)
+            conditions.append(f"NOT (l.business_type = ANY(${len(values)}))")
         if departements:
             values.append(departements)
-            conditions.append(f"departement = ANY(${len(values)})")
+            conditions.append(f"l.departement = ANY(${len(values)})")
         if not show_equipped:
-            conditions.append("gmaps_website IS NULL")
+            conditions.append("l.gmaps_website IS NULL")
         if not show_closed:
-            conditions.append("gmaps_status IS DISTINCT FROM 'closed_permanently'")
+            conditions.append("l.gmaps_status IS DISTINCT FROM 'closed_permanently'")
 
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-        sql = f"SELECT * FROM leads {where} ORDER BY score DESC, name ASC"
+        # `contact_status` : statut le plus avancé parmi toutes les listes de
+        # prospection contenant ce lead (même logique que get_leads_in_bounds)
+        # — sert à afficher "déjà appelé" côté Recherche pour ne pas relancer
+        # un contact déjà fait, même en dehors de la vue carte.
+        sql = f"""
+            SELECT l.*, ll.status AS contact_status
+            FROM leads l
+            LEFT JOIN LATERAL (
+                SELECT status FROM list_leads WHERE lead_id = l.id
+                ORDER BY CASE status
+                    WHEN 'facture_payee' THEN 6
+                    WHEN 'closing' THEN 5
+                    WHEN 'devis_relance' THEN 4
+                    WHEN 'devis_envoye' THEN 4
+                    WHEN 'pas_interesse' THEN 2
+                    WHEN 'injoignable' THEN 2
+                    WHEN 'repondeur' THEN 1
+                    WHEN 'rappel' THEN 1
+                    ELSE 0
+                END DESC
+                LIMIT 1
+            ) ll ON true
+            {where}
+            ORDER BY l.score DESC, l.name ASC
+        """
 
         rows = await self.pool.fetch(sql, *values)
         return [dict(r) for r in rows]
@@ -518,16 +560,40 @@ class LeadStore:
         )
         return {"id": list_id, "name": name, "created_at": now, "updated_at": now, "lead_count": 0}
 
-    async def rename_list(self, list_id: str, name: str) -> bool:
+    async def patch_list(
+        self,
+        list_id: str,
+        name: Optional[str] = None,
+        assigned_to: Optional[str] = None,
+        priorite: Optional[str] = None,
+    ) -> bool:
+        """Renomme la liste et/ou l'attribue à un utilisateur et/ou lui donne
+        un niveau de priorité — attribution/priorité au niveau de la LISTE
+        (qui la suit, son urgence globale), distinct de `assigned_to` par
+        lead déjà existant sur list_leads."""
         now = datetime.now(timezone.utc).isoformat()
-        status = await self.pool.execute(
-            "UPDATE prospect_lists SET name = $1, updated_at = $2 WHERE id = $3", name, now, list_id
-        )
+        sets: list[str] = ["updated_at = $1"]
+        values: list[Any] = [now]
+
+        if name is not None:
+            values.append(name)
+            sets.append(f"name = ${len(values)}")
+        if assigned_to is not None:
+            values.append(assigned_to or None)
+            sets.append(f"assigned_to = ${len(values)}")
+        if priorite is not None:
+            values.append(priorite or None)
+            sets.append(f"priorite = ${len(values)}")
+
+        values.append(list_id)
+        query = f"UPDATE prospect_lists SET {', '.join(sets)} WHERE id = ${len(values)}"
+        status = await self.pool.execute(query, *values)
         return _affected(status) > 0
 
     async def get_lists(self) -> list[dict[str, Any]]:
         rows = await self.pool.fetch("""
             SELECT pl.id, pl.name, pl.created_at, pl.updated_at,
+                   pl.assigned_to, pl.priorite,
                    COUNT(ll.lead_id) as lead_count
             FROM prospect_lists pl
             LEFT JOIN list_leads ll ON ll.list_id = pl.id
@@ -663,6 +729,22 @@ class LeadStore:
             WHERE ll.list_id = $1
             ORDER BY ll.added_at ASC
         """, list_id)
+        return [dict(r) for r in rows]
+
+    async def get_rappels(self) -> list[dict[str, Any]]:
+        """Tous les leads tagués 'rappel' dans au moins une liste de
+        prospection, toutes listes confondues — sert de todo-list des
+        rappels à faire, indépendamment de la liste/ville/département."""
+        rows = await self.pool.fetch("""
+            SELECT l.id, l.name, l.phone, l.address, l.city, l.business_type,
+                   ll.list_id, pl.name AS list_name, ll.notes AS list_notes,
+                   ll.assigned_to, ll.updated_at
+            FROM list_leads ll
+            JOIN leads l ON l.id = ll.lead_id
+            JOIN prospect_lists pl ON pl.id = ll.list_id
+            WHERE ll.status = 'rappel'
+            ORDER BY ll.updated_at ASC
+        """)
         return [dict(r) for r in rows]
 
     async def get_list_stats(self, list_id: str) -> dict[str, Any]:

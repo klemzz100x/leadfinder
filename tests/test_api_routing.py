@@ -32,8 +32,12 @@ def test_leads_meta_route_not_shadowed_by_lead_id_catchall(monkeypatch):
     async def fake_distinct_cities():
         return ["VilleTest"]
 
+    # "restaurant" est un business_type brut connu, groupé sous la catégorie
+    # "Restauration" (categories.py) ; "type_totalement_inconnu" ne
+    # correspond à aucune catégorie et doit retomber sur "Autres" — le
+    # filtre "type de client" ne doit jamais réafficher des valeurs brutes.
     async def fake_distinct_types(city=None):
-        return ["type_test"]
+        return ["restaurant", "type_totalement_inconnu"]
 
     async def fake_get_lead(lead_id):
         return None
@@ -46,7 +50,7 @@ def test_leads_meta_route_not_shadowed_by_lead_id_catchall(monkeypatch):
     resp = client.get("/api/leads/meta")
 
     assert resp.status_code == 200
-    assert resp.json() == {"cities": ["VilleTest"], "types": ["type_test"]}
+    assert resp.json() == {"cities": ["VilleTest"], "types": ["Autres", "Restauration"]}
 
 
 def test_get_lead_by_id_still_reachable(monkeypatch):
@@ -61,3 +65,16 @@ def test_get_lead_by_id_still_reachable(monkeypatch):
 
     assert resp.status_code == 200
     assert resp.json()["name"] == "Business Test"
+
+
+def test_get_rappels_returns_store_data(monkeypatch):
+    async def fake_get_rappels():
+        return [{"id": "node:1", "name": "Salon Test", "list_id": "abc", "list_name": "Liste Test"}]
+
+    monkeypatch.setattr(api_module.store, "get_rappels", fake_get_rappels)
+
+    client = TestClient(api_module.app)
+    resp = client.get("/api/rappels")
+
+    assert resp.status_code == 200
+    assert resp.json() == [{"id": "node:1", "name": "Salon Test", "list_id": "abc", "list_name": "Liste Test"}]

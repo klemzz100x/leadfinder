@@ -213,6 +213,16 @@ body { min-height: 100vh; }
 .stats-city { font-weight: 800; font-size: 1.05rem; color: var(--text); }
 .stats-total { color: var(--muted); font-size: 0.9rem; }
 
+/* ── Gamification : CA estimé ── */
+.estimated-revenue {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #22c55e;
+  white-space: nowrap;
+}
+.estimated-revenue-label { font-weight: 500; color: var(--muted); margin-left: 0.2rem; }
+.estimated-revenue-compact { font-size: 0.75rem; }
+
 /* ── Toolbar ── */
 .toolbar {
   display: flex;
@@ -422,6 +432,23 @@ main { flex: 1; }
 }
 .gmaps-badge.gmaps-equipped { background: rgba(34, 197, 94, 0.18); color: #22c55e; }
 .gmaps-badge.gmaps-closed { background: rgba(239, 68, 68, 0.18); color: #ef4444; }
+
+/* Badge unique et volontairement voyant (couleur non réutilisée ailleurs
+   dans l'UI) — but : impossible à manquer en scannant la liste, pour ne
+   jamais rappeler par erreur une entreprise déjà contactée. */
+.already-called-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  background: #7c3aed;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(124, 58, 237, 0.25);
+}
+.lead-card.lead-card-contacted {
+  background: rgba(124, 58, 237, 0.06);
+}
 
 /* Card row 2: score | phone + actions */
 .lead-card-score-col {
@@ -974,6 +1001,50 @@ main { flex: 1; }
   line-height: 18px;
   height: 18px;
 }
+.tab-badge-rappels { background: #a78bfa; }
+
+/* ── Rappels (todo-list cross-listes) ── */
+.rappels-view { padding: 1rem 1.25rem; max-width: 900px; margin: 0 auto; }
+.rappels-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+.rappels-header h2 { margin: 0; font-size: 1.15rem; }
+.rappels-count {
+  background: #a78bfa;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1rem 0.55rem;
+  border-radius: 99px;
+}
+.rappels-list { display: flex; flex-direction: column; gap: 0.5rem; }
+.rappel-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: var(--surface);
+  border-radius: var(--radius);
+  border-left: 4px solid #a78bfa;
+  box-shadow: var(--shadow);
+}
+.rappel-main { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+.rappel-name { font-weight: 700; font-size: 0.95rem; }
+.rappel-meta { font-size: 0.8rem; color: var(--muted); }
+.rappel-notes { font-size: 0.8rem; color: var(--text); font-style: italic; }
+.rappel-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.rappel-status-select {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--surface2);
+  background: var(--bg);
+  color: var(--text);
+}
 
 /* ── Add to list button ── */
 .atl-wrap {
@@ -1133,8 +1204,8 @@ main { flex: 1; }
 
 .list-nav-item {
   display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-direction: column;
+  gap: 0.35rem;
   padding: 0.55rem 0.85rem;
   cursor: pointer;
   border-radius: 0;
@@ -1146,6 +1217,35 @@ main { flex: 1; }
   background: rgba(59,130,246,0.1);
   border-left-color: var(--accent);
 }
+
+.list-nav-top {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.list-nav-priorite-dot {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+.list-nav-meta {
+  display: flex;
+  gap: 0.4rem;
+  cursor: default;
+}
+.list-nav-meta-select {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  padding: 0.15rem 0.3rem;
+  border-radius: 4px;
+  border: 1px solid var(--surface2);
+  background: var(--bg);
+  color: var(--muted);
+  cursor: pointer;
+}
+.list-nav-meta-select:focus { outline: none; border-color: var(--accent); }
 
 .list-nav-name {
   flex: 1;

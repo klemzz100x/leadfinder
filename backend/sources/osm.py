@@ -96,21 +96,29 @@ TYPE_MAP: dict[tuple[str, str], str] = {
 
 
 def _normalize_type(tags: dict[str, str]) -> str:
-    """Type interne à partir des tags. Fallback : 'craft:xxx' / 'shop:xxx' / 'autre'."""
+    """Type interne à partir des tags. Fallback : 'craft:xxx' / 'shop:xxx' / 'autre'.
+
+    OSM autorise des valeurs composées séparées par ';' sur un même tag (ex:
+    amenity=restaurant;cafe) — on essaie chaque partie contre TYPE_MAP avant
+    de replier sur la première partie brute, pour ne jamais stocker la
+    chaîne composée telle quelle en business_type (elle échapperait à tout
+    regroupement en catégorie côté filtre)."""
     for key in ("amenity", "office", "shop", "leisure", "tourism", "craft", "healthcare"):
         val = tags.get(key)
         if not val:
             continue
-        mapped = TYPE_MAP.get((key, val))
-        if mapped:
-            return mapped
+        parts = [p.strip() for p in val.split(";") if p.strip()] or [val]
+        for part in parts:
+            mapped = TYPE_MAP.get((key, part))
+            if mapped:
+                return mapped
         if key == "craft":
             return "artisan"
         if key == "shop":
             return "commerce"
         if key == "healthcare":
             return "sante"
-        return val
+        return parts[0]
     return "autre"
 
 

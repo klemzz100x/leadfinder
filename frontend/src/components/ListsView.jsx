@@ -1,11 +1,20 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  createList, deleteList, renameList,
+  createList, deleteList, renameList, patchList,
   fetchListLeads, fetchListStats,
   removeLeadFromList, patchListLead,
 } from '../api.js'
 import ListLeadRow, { STATUSES } from './ListLeadRow.jsx'
 import ListStats from './ListStats.jsx'
+import { USERS } from '../identity.js'
+
+export const PRIORITES = [
+  { value: '',          label: 'Aucune priorité', icon: '⚪' },
+  { value: 'urgent',    label: 'Urgent',          icon: '🔴' },
+  { value: 'important', label: 'Important',       icon: '🟠' },
+  { value: 'a_faire',   label: 'À faire',         icon: '🟡' },
+]
+const PRIORITE_MAP = Object.fromEntries(PRIORITES.map(p => [p.value, p]))
 
 export default function ListsView({ lists, onListsChange }) {
   const [selected, setSelected]     = useState(null)
@@ -79,6 +88,18 @@ export default function ListsView({ lists, onListsChange }) {
     if (selected?.id === list.id) setSelected(prev => ({ ...prev, name: trimmed }))
   }
 
+  const handleListAssign = async (list, assignedTo) => {
+    await patchList(list.id, { assigned_to: assignedTo })
+    onListsChange(lists.map(l => l.id === list.id ? { ...l, assigned_to: assignedTo } : l))
+    if (selected?.id === list.id) setSelected(prev => ({ ...prev, assigned_to: assignedTo }))
+  }
+
+  const handleListPriorite = async (list, priorite) => {
+    await patchList(list.id, { priorite })
+    onListsChange(lists.map(l => l.id === list.id ? { ...l, priorite } : l))
+    if (selected?.id === list.id) setSelected(prev => ({ ...prev, priorite }))
+  }
+
   const handleStatusChange = async (lead, status) => {
     await patchListLead(selected.id, lead.id, { status })
     setListLeads(prev => prev.map(l => l.id === lead.id ? { ...l, list_status: status } : l))
@@ -137,27 +158,53 @@ export default function ListsView({ lists, onListsChange }) {
               className={`list-nav-item${selected?.id === list.id ? ' active' : ''}`}
               onClick={() => renamingId !== list.id && loadList(list)}
             >
-              {renamingId === list.id ? (
-                <input
-                  className="list-nav-rename-input"
-                  autoFocus
-                  value={renameValue}
-                  onChange={e => setRenameValue(e.target.value)}
-                  onClick={e => e.stopPropagation()}
-                  onBlur={() => commitRename(list)}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') { e.preventDefault(); commitRename(list) }
-                    if (e.key === 'Escape') setRenamingId(null)
-                  }}
-                />
-              ) : (
-                <span className="list-nav-name">{list.name}</span>
-              )}
-              <span className="list-nav-count">{list.lead_count}</span>
-              {renamingId !== list.id && (
-                <button className="list-nav-rename" onClick={e => startRename(list, e)} title="Renommer">✏️</button>
-              )}
-              <button className="list-nav-del" onClick={e => handleDelete(list, e)} title="Supprimer">×</button>
+              <div className="list-nav-top">
+                <span className="list-nav-priorite-dot" title={PRIORITE_MAP[list.priorite || '']?.label}>
+                  {PRIORITE_MAP[list.priorite || '']?.icon}
+                </span>
+                {renamingId === list.id ? (
+                  <input
+                    className="list-nav-rename-input"
+                    autoFocus
+                    value={renameValue}
+                    onChange={e => setRenameValue(e.target.value)}
+                    onClick={e => e.stopPropagation()}
+                    onBlur={() => commitRename(list)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') { e.preventDefault(); commitRename(list) }
+                      if (e.key === 'Escape') setRenamingId(null)
+                    }}
+                  />
+                ) : (
+                  <span className="list-nav-name">{list.name}</span>
+                )}
+                <span className="list-nav-count">{list.lead_count}</span>
+                {renamingId !== list.id && (
+                  <button className="list-nav-rename" onClick={e => startRename(list, e)} title="Renommer">✏️</button>
+                )}
+                <button className="list-nav-del" onClick={e => handleDelete(list, e)} title="Supprimer">×</button>
+              </div>
+              <div className="list-nav-meta" onClick={e => e.stopPropagation()}>
+                <select
+                  className="list-nav-meta-select"
+                  value={list.assigned_to || ''}
+                  onChange={e => handleListAssign(list, e.target.value)}
+                  title="Attribuer cette liste"
+                >
+                  <option value="">Non attribuée</option>
+                  {USERS.map(u => <option key={u} value={u}>{u}</option>)}
+                </select>
+                <select
+                  className="list-nav-meta-select"
+                  value={list.priorite || ''}
+                  onChange={e => handleListPriorite(list, e.target.value)}
+                  title="Priorité de cette liste"
+                >
+                  {PRIORITES.map(p => (
+                    <option key={p.value} value={p.value}>{p.icon} {p.label}</option>
+                  ))}
+                </select>
+              </div>
             </div>
           ))}
         </div>

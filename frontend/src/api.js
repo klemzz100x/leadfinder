@@ -37,6 +37,16 @@ export async function fetchMeta(city) {
   return res.json()
 }
 
+// business_type bruts (non groupés en catégories) — utilisé uniquement par
+// l'éditeur de catégories, qui a besoin des valeurs brutes à assigner.
+// fetchMeta() renvoie des catégories déjà groupées, impropres à cet usage.
+export async function fetchRawTypes() {
+  const res = await fetch(`${BASE}/leads/meta/raw-types`)
+  if (!res.ok) return []
+  const data = await res.json()
+  return data.types || []
+}
+
 export async function fetchDepartements() {
   const res = await fetch(`${BASE}/departements`)
   if (!res.ok) return []
@@ -92,6 +102,12 @@ export async function fetchLists() {
   return res.json()
 }
 
+export async function fetchRappels() {
+  const res = await fetch(`${BASE}/rappels`)
+  if (!res.ok) return []
+  return res.json()
+}
+
 export async function createList(name) {
   const res = await fetch(`${BASE}/lists`, {
     method: 'POST',
@@ -109,10 +125,14 @@ export async function deleteList(id) {
 }
 
 export async function renameList(id, name) {
+  return patchList(id, { name })
+}
+
+export async function patchList(id, data) {
   const res = await fetch(`${BASE}/lists/${encodeURIComponent(id)}`, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(data),
   })
   if (!res.ok) throw new Error(await res.text())
   return res.json()

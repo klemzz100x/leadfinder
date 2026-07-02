@@ -54,9 +54,15 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
 
   const scorePercent = Math.min(Math.max(lead.score, 0), 1) * 100
 
+  // Un contact_status présent et différent du défaut "a_contacter" signifie
+  // qu'un appel/contact a déjà été tenté sur ce lead (dans une liste, peu
+  // importe laquelle) — mis en avant ici pour ne pas rappeler par erreur la
+  // même entreprise depuis la vue Recherche.
+  const alreadyContacted = lead.contact_status && lead.contact_status !== 'a_contacter'
+
   return (
     <>
-      <div className={`lead-card temp-${lead.temperature}`}>
+      <div className={`lead-card temp-${lead.temperature}${alreadyContacted ? ' lead-card-contacted' : ''}`}>
         {/* Colonne 1 / Ligne 1 : case à cocher + badge température */}
         <div className="lead-card-badge">
           {onToggleSelect && (
@@ -84,6 +90,11 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
 
         {/* Colonne 3 / Ligne 1 : badge web + signaux Google Places */}
         <div className="lead-card-top-right">
+          {alreadyContacted && (
+            <span className="already-called-badge" title="Déjà contacté dans une liste — vérifier avant de rappeler">
+              ☎️ Déjà appelé
+            </span>
+          )}
           <span className={`web-badge status-${lead.web_status}`}>
             {STATUS_LABEL[lead.web_status] || lead.web_status}
           </span>

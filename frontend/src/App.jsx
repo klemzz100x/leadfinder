@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import {
-  scanArea, fetchLeads, fetchMeta, fetchDepartements, exportCsvUrl,
-  fetchCategories, fetchLists,
+  scanArea, fetchLeads, fetchMeta, fetchRawTypes, fetchDepartements, exportCsvUrl,
+  fetchCategories, fetchLists, fetchRappels,
 } from './api.js'
 import { mergeScanSummaries } from './utils.js'
 import SearchBar from './components/SearchBar.jsx'
@@ -11,6 +11,7 @@ import LeadList from './components/LeadList.jsx'
 import CategoryView from './components/CategoryView.jsx'
 import CategoryEditor from './components/CategoryEditor.jsx'
 import ListsView from './components/ListsView.jsx'
+import RappelsView from './components/RappelsView.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import DepartementStatsView from './components/DepartementStatsView.jsx'
 import DeptScanEstimate from './components/DeptScanEstimate.jsx'
@@ -34,17 +35,29 @@ export default function App() {
   const [categories, setCategories]             = useState({})
   const [categoriesLoaded, setCategoriesLoaded] = useState(false)
   const [categoryEditorOpen, setCategoryEditorOpen] = useState(false)
+  const [rawTypes, setRawTypes]                 = useState([])
 
   // Onglet principal
   const [tab, setTab] = useState('search')
 
   // Listes partagées
   const [lists, setLists] = useState([])
+  const [rappelsCount, setRappelsCount] = useState(0)
 
   useEffect(() => {
     fetchLists().then(setLists)
     fetchDepartements().then(setDepartements)
     fetchMeta().then((meta) => setTypes(meta.types || []))
+    fetchRappels().then((r) => setRappelsCount(r.length))
+  }, [])
+
+  // Badge de l'onglet à jour même si l'utilisateur ne l'a pas ouvert
+  // (résolution par un autre utilisateur sur la base partagée, notamment).
+  useEffect(() => {
+    const id = setInterval(() => {
+      fetchRappels().then((r) => setRappelsCount(r.length))
+    }, 15000)
+    return () => clearInterval(id)
   }, [])
 
   const loadLeads = useCallback(async (c, f = filter) => {
@@ -139,6 +152,9 @@ export default function App() {
       setCategories(cats)
       setCategoriesLoaded(true)
     }
+    // Types bruts (non groupés) : /api/leads/meta ne renvoie plus que des
+    // catégories déjà groupées, impropres à l'édition des catégories elles-mêmes.
+    setRawTypes(await fetchRawTypes())
     setCategoryEditorOpen(true)
   }
 
@@ -166,6 +182,13 @@ export default function App() {
             >
               📋 Mes Listes
               {lists.length > 0 && <span className="tab-badge">{lists.length}</span>}
+            </button>
+            <button
+              className={`main-tab${tab === 'rappels' ? ' active' : ''}`}
+              onClick={() => setTab('rappels')}
+            >
+              📞 Rappels
+              {rappelsCount > 0 && <span className="tab-badge tab-badge-rappels">{rappelsCount}</span>}
             </button>
             <button
               className={`main-tab${tab === 'dashboard' ? ' active' : ''}`}
@@ -324,6 +347,8 @@ export default function App() {
         <ListsView lists={lists} onListsChange={setLists} />
       )}
 
+      {tab === 'rappels' && <RappelsView />}
+
       {tab === 'dashboard' && (
         <Dashboard onEditCategories={handleOpenEditor} />
       )}
@@ -335,7 +360,7 @@ export default function App() {
       {categoryEditorOpen && (
         <CategoryEditor
           categories={categories}
-          types={types}
+          types={rawTypes}
           onClose={() => setCategoryEditorOpen(false)}
           onSave={setCategories}
         />

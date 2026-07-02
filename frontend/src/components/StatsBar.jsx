@@ -1,3 +1,5 @@
+import EstimatedRevenue from './EstimatedRevenue.jsx'
+
 const LABELS = {
   chaud: { label: 'Chauds', emoji: '🔥' },
   tiede: { label: 'Tièdes', emoji: '🟠' },
@@ -16,6 +18,7 @@ export default function StatsBar({ summary }) {
           {LABELS[temp]?.emoji || '?'} {count} {LABELS[temp]?.label || temp}
         </span>
       ))}
+      <EstimatedRevenue count={by_temperature?.chaud || 0} compact />
     </div>
   )
 }

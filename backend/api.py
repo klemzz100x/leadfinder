@@ -19,7 +19,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, model_validator
 
 from .audit import audit_url
-from .categories import load_categories, save_categories
+from .categories import load_categories, save_categories, types_to_category
 from .departements import DEPARTEMENT_CENTROIDS, DEPARTEMENTS
 from .pipeline import ScanSummary, scan_city, scan_departement
 from .sources.osm import USER_AGENT
@@ -91,8 +91,10 @@ class CreateListRequest(BaseModel):
     name: str
 
 
-class RenameListRequest(BaseModel):
-    name: str
+class PatchListRequest(BaseModel):
+    name: Optional[str] = None
+    assigned_to: Optional[str] = None
+    priorite: Optional[str] = None
 
 
 class AddLeadsRequest(BaseModel):
@@ -158,9 +160,31 @@ async def get_leads(
     show_closed: bool = Query(False),
     departements: Optional[list[str]] = Query(None),
 ) -> list[dict]:
-    """Liste des leads triée par score décroissant, avec filtres optionnels."""
+    """Liste des leads triée par score décroissant, avec filtres optionnels.
+
+    `type` est désormais un nom de catégorie (cf. /api/leads/meta, qui ne
+    renvoie plus que des catégories) résolu en la liste de business_type
+    bruts qu'elle regroupe. Reste rétrocompatible avec une valeur brute
+    (ancien lien/favori) si elle ne correspond à aucune catégorie connue.
+    "Autres" est un cas particulier : n'existe pas comme vraie catégorie,
+    signifie "tout business_type non couvert par une catégorie connue"."""
+    business_type = None
+    business_types = None
+    exclude_business_types = None
+    if type:
+        categories = load_categories()
+        cat = categories.get(type)
+        if cat:
+            business_types = cat["types"]
+        elif type == "Autres":
+            exclude_business_types = [t for c in categories.values() for t in c["types"]]
+        else:
+            business_type = type
+
     return await store.get_leads(
-        city=city, temperature=temperature, business_type=type,
+        city=city, temperature=temperature,
+        business_type=business_type, business_types=business_types,
+        exclude_business_types=exclude_business_types,
         show_equipped=show_equipped, show_closed=show_closed,
         departements=departements,
     )
@@ -168,11 +192,29 @@ async def get_leads(
 
 @app.get("/api/leads/meta")
 async def leads_meta(city: Optional[str] = Query(None)) -> dict:
-    """Villes et types distincts pour alimenter les filtres UI."""
+    """Villes et catégories distinctes pour alimenter les filtres UI.
+
+    Les catégories (categories.json, éditables via CategoryEditor) regroupent
+    les dizaines de business_type bruts issus d'OSM (dont d'éventuelles
+    valeurs composées type "restaurant;cafe" jamais nettoyées côté source) en
+    une poignée de groupes lisibles — le filtre "type de client" ne doit
+    jamais dépasser une quinzaine d'entrées."""
+    raw_types = await store.distinct_types(city=city)
+    type_to_cat = types_to_category(load_categories())
+    grouped = {type_to_cat.get(t, "Autres") for t in raw_types}
     return {
         "cities": await store.distinct_cities(),
-        "types": await store.distinct_types(city=city),
+        "types": sorted(grouped),
     }
+
+
+@app.get("/api/leads/meta/raw-types")
+async def leads_meta_raw_types() -> dict:
+    """business_type bruts (non groupés), pour l'écran d'édition des
+    catégories (CategoryEditor) — qui a justement besoin des valeurs brutes
+    pour les assigner à une catégorie, contrairement au filtre de recherche
+    qui n'affiche plus que les catégories déjà groupées."""
+    return {"types": await store.distinct_types()}
 
 
 @app.get("/api/departements")
@@ -307,6 +349,12 @@ async def departement_estimate(code: str) -> dict:
     return {"code": code, "name": name, "communes": len(communes), "population": population}
 
 
+@app.get("/api/rappels")
+async def get_rappels() -> list[dict]:
+    """Todo-list des leads tagués 'rappel', toutes listes confondues."""
+    return await store.get_rappels()
+
+
 @app.get("/api/lists")
 async def get_lists() -> list[dict]:
     return await store.get_lists()
@@ -321,13 +369,13 @@ async def create_list(req: CreateListRequest) -> dict:
 
 
 @app.patch("/api/lists/{list_id}")
-async def rename_list(list_id: str, req: RenameListRequest) -> dict:
-    name = req.name.strip()
-    if not name:
+async def patch_list(list_id: str, req: PatchListRequest) -> dict:
+    name = req.name.strip() if req.name is not None else None
+    if req.name is not None and not name:
         raise HTTPException(400, "Nom de liste vide")
-    if not await store.rename_list(list_id, name):
+    if not await store.patch_list(list_id, name=name, assigned_to=req.assigned_to, priorite=req.priorite):
         raise HTTPException(404, f"Liste {list_id!r} introuvable")
-    return {"ok": True, "name": name}
+    return {"ok": True}
 
 
 @app.delete("/api/lists/{list_id}")

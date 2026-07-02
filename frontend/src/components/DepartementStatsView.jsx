@@ -4,6 +4,7 @@ import DepartementFilter from './DepartementFilter.jsx'
 import DeptScanEstimate from './DeptScanEstimate.jsx'
 import BatchScanPanel from './BatchScanPanel.jsx'
 import FranceMap from './FranceMap.jsx'
+import EstimatedRevenue from './EstimatedRevenue.jsx'
 
 export default function DepartementStatsView({ lists, onListsChange }) {
   const [categories, setCategories] = useState({})
@@ -75,6 +76,9 @@ export default function DepartementStatsView({ lists, onListsChange }) {
           selected={selectedDepts}
           onChange={(codes) => { setSelectedDepts(codes); setBatchCodes(null) }}
         />
+        {stats.length > 0 && (
+          <EstimatedRevenue count={stats.reduce((sum, v) => sum + (v.chauds || 0), 0)} />
+        )}
       </div>
 
       {error && <p className="error">{error}</p>}
@@ -124,6 +128,7 @@ export default function DepartementStatsView({ lists, onListsChange }) {
               >
                 <span className="dept-stats-name">{v.name}</span>
                 <span className="dept-stats-count">🔥 {v.chauds}</span>
+                <EstimatedRevenue count={v.chauds} compact />
               </div>
             ))}
           </div>

@@ -1,3 +1,5 @@
+import EstimatedRevenue from './EstimatedRevenue.jsx'
+
 const STATUS_META = {
   a_contacter:   { label: 'À contacter',   color: '#60a5fa' },
   repondeur:     { label: 'Répondeur',      color: '#eab308' },
@@ -35,6 +37,8 @@ export default function ListStats({ stats }) {
           <span className="kpi-label">Taux closing</span>
         </div>
       </div>
+
+      <EstimatedRevenue count={total} />
 
       <div className="list-stats-breakdown">
         {Object.entries(STATUS_META).map(([key, meta]) => {
