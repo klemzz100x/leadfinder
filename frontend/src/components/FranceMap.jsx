@@ -5,6 +5,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { fetchLeadsInBounds } from '../api.js'
 import LeadMapPopup from './LeadMapPopup.jsx'
+import { CONTACT_STATUS_COLOR, CONTACT_STATUS_LABEL } from '../statusColors.js'
 
 const FRANCE_CENTER = [46.6, 2.5]
 const FRANCE_ZOOM = 6
@@ -43,6 +44,28 @@ function clusterIcon(cluster) {
     className: 'city-bubble-wrap',
     iconSize: [size, size],
   })
+}
+
+// Légende du code couleur des marqueurs précis (niveau micro uniquement —
+// les bulles ville/cluster du niveau macro restent sur la densité de leads
+// chauds, sans rapport avec le statut de contact individuel).
+function MicroLegend() {
+  const entries = [
+    { color: TEMP_COLOR.chaud, label: 'Chaud (non traité)' },
+    ...Object.entries(CONTACT_STATUS_LABEL)
+      .filter(([status]) => ['injoignable', 'pas_interesse', 'devis_envoye', 'closing'].includes(status))
+      .map(([status, label]) => ({ color: CONTACT_STATUS_COLOR[status], label })),
+  ]
+  return (
+    <div className="map-legend">
+      {entries.map((e) => (
+        <div key={e.label} className="map-legend-item">
+          <span className="map-legend-dot" style={{ background: e.color }} />
+          {e.label}
+        </div>
+      ))}
+    </div>
+  )
 }
 
 function BackToFranceButton() {
@@ -124,6 +147,7 @@ export default function FranceMap({ villeStats, activite, selectedVille, onSelec
       <ZoomWatcher onViewportChange={setViewport} />
       <FlyToVille selectedVille={selectedVille} villeStats={villeStats} />
       <BackToFranceButton />
+      {viewport.drilledIn && <MicroLegend />}
 
       {!viewport.drilledIn && (
         <MarkerClusterGroup iconCreateFunction={clusterIcon} showCoverageOnHover={false}>
@@ -141,14 +165,19 @@ export default function FranceMap({ villeStats, activite, selectedVille, onSelec
         </MarkerClusterGroup>
       )}
 
-      {viewport.drilledIn && preciseLeads.map((lead) => (
+      {viewport.drilledIn && preciseLeads.map((lead) => {
+        // Un point reste rouge (chaud, non traité) tant qu'aucun contact n'a
+        // été enregistré dans une liste, puis prend la couleur du statut le
+        // plus avancé une fois traité (ex: vert une fois "devis fait").
+        const color = CONTACT_STATUS_COLOR[lead.contact_status] || TEMP_COLOR[lead.temperature] || '#60a5fa'
+        return (
         <CircleMarker
           key={lead.id}
           center={[lead.lat, lead.lng]}
           radius={9}
           pathOptions={{
-            color: TEMP_COLOR[lead.temperature] || '#60a5fa',
-            fillColor: TEMP_COLOR[lead.temperature] || '#60a5fa',
+            color,
+            fillColor: color,
             fillOpacity: 0.85,
             weight: 2,
           }}
@@ -158,7 +187,8 @@ export default function FranceMap({ villeStats, activite, selectedVille, onSelec
             <LeadMapPopup lead={lead} lists={lists} onListsChange={onListsChange} />
           </Popup>
         </CircleMarker>
-      ))}
+        )
+      })}
     </MapContainer>
   )
 }

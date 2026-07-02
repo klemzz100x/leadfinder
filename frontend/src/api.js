@@ -39,6 +39,12 @@ export async function fetchDepartements() {
   return res.json()
 }
 
+export async function fetchDepartementEstimate(code) {
+  const res = await fetch(`${BASE}/departements/${encodeURIComponent(code)}/estimate`)
+  if (!res.ok) return null
+  return res.json()
+}
+
 export async function patchLead(id, data) {
   const res = await fetch(`${BASE}/leads/${encodeURIComponent(id)}`, {
     method: 'PATCH',

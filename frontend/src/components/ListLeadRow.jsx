@@ -1,16 +1,17 @@
 import { useState } from 'react'
 import { googleMapsUrl } from '../utils.js'
+import { CONTACT_STATUS_COLOR } from '../statusColors.js'
 
 export const STATUSES = [
   { value: 'a_contacter',   label: 'À contacter',   color: '#60a5fa' },
   { value: 'repondeur',     label: 'Répondeur',      color: '#eab308' },
   { value: 'rappel',        label: 'Rappel',         color: '#a78bfa' },
-  { value: 'injoignable',   label: 'Injoignable',    color: '#6b7280' },
-  { value: 'pas_interesse', label: 'Pas intéressé',  color: '#ef4444' },
-  { value: 'devis_envoye',  label: 'Devis envoyé',   color: '#f97316' },
-  { value: 'devis_relance', label: 'Devis relancé',  color: '#fb923c' },
-  { value: 'closing',       label: 'Closing',        color: '#22c55e' },
-  { value: 'facture_payee', label: 'Facture payée',  color: '#10b981' },
+  { value: 'injoignable',   label: 'Injoignable',    color: CONTACT_STATUS_COLOR.injoignable },
+  { value: 'pas_interesse', label: 'Pas intéressé',  color: CONTACT_STATUS_COLOR.pas_interesse },
+  { value: 'devis_envoye',  label: 'Devis envoyé',   color: CONTACT_STATUS_COLOR.devis_envoye },
+  { value: 'devis_relance', label: 'Devis relancé',  color: CONTACT_STATUS_COLOR.devis_relance },
+  { value: 'closing',       label: 'Closing',        color: CONTACT_STATUS_COLOR.closing },
+  { value: 'facture_payee', label: 'Facture payée',  color: CONTACT_STATUS_COLOR.facture_payee },
 ]
 
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.value, s]))
@@ -43,7 +44,7 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
 
   return (
     <>
-      <div className={`llr-row status-group-${group}`}>
+      <div className="llr-row" style={{ borderLeftColor: meta.color }}>
         <div className="llr-info">
           <span className="llr-name" title={lead.address || lead.name}>{lead.name}</span>
           <span className="llr-meta">{lead.business_type}{lead.city ? ` · ${lead.city}` : ''}</span>

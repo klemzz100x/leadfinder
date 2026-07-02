@@ -13,6 +13,7 @@ import CategoryEditor from './components/CategoryEditor.jsx'
 import ListsView from './components/ListsView.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import DepartementStatsView from './components/DepartementStatsView.jsx'
+import DeptScanEstimate from './components/DeptScanEstimate.jsx'
 
 export default function App() {
   const [city, setCity]         = useState('')
@@ -152,13 +153,16 @@ export default function App() {
         </div>
 
         {tab === 'search' && (
-          <SearchBar
-            city={city}
-            onChange={setCity}
-            onScan={handleScan}
-            scanning={scanning}
-            canScan={canScan}
-          />
+          <>
+            <SearchBar
+              city={city}
+              onChange={setCity}
+              onScan={handleScan}
+              scanning={scanning}
+              canScan={canScan}
+            />
+            {!city.trim() && <DeptScanEstimate codes={filter.departements} />}
+          </>
         )}
         {error && <p className="error">{error}</p>}
       </header>

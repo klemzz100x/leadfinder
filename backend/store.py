@@ -275,17 +275,38 @@ class LeadStore:
         """Leads chauds précis dans un viewport carte (Phase 5, niveau 2 du drill-down).
 
         Toujours borné au rectangle visible + LIMIT : jamais tous les leads de
-        France chargés en mémoire, uniquement ce qui est affiché à l'écran."""
+        France chargés en mémoire, uniquement ce qui est affiché à l'écran.
+
+        `contact_status` : statut le plus avancé trouvé parmi TOUTES les listes
+        de prospection contenant ce lead (un lead peut être dans plusieurs
+        listes) — NULL s'il n'est dans aucune liste. Sert au code couleur des
+        marqueurs précis côté carte (le niveau macro/bulles reste sur la seule
+        densité de leads chauds, inchangé)."""
         rows = await self.pool.fetch(
             f"""
-            SELECT id, name, address, phone, website, web_status, business_type,
-                   score, temperature, gmaps_status, gmaps_website, gmaps_url,
-                   city, lat, lng
-            FROM leads
-            WHERE temperature = 'chaud' AND {_ACTIVE_PIPELINE_WHERE}
-              AND lat BETWEEN $1 AND $2 AND lng BETWEEN $3 AND $4
-              AND ($5::text[] IS NULL OR business_type = ANY($5))
-            ORDER BY score DESC
+            SELECT l.id, l.name, l.address, l.phone, l.website, l.web_status, l.business_type,
+                   l.score, l.temperature, l.gmaps_status, l.gmaps_website, l.gmaps_url,
+                   l.city, l.lat, l.lng, ll.status AS contact_status
+            FROM leads l
+            LEFT JOIN LATERAL (
+                SELECT status FROM list_leads WHERE lead_id = l.id
+                ORDER BY CASE status
+                    WHEN 'facture_payee' THEN 6
+                    WHEN 'closing' THEN 5
+                    WHEN 'devis_relance' THEN 4
+                    WHEN 'devis_envoye' THEN 4
+                    WHEN 'pas_interesse' THEN 2
+                    WHEN 'injoignable' THEN 2
+                    WHEN 'repondeur' THEN 1
+                    WHEN 'rappel' THEN 1
+                    ELSE 0
+                END DESC
+                LIMIT 1
+            ) ll ON true
+            WHERE l.temperature = 'chaud' AND {_ACTIVE_PIPELINE_WHERE}
+              AND l.lat BETWEEN $1 AND $2 AND l.lng BETWEEN $3 AND $4
+              AND ($5::text[] IS NULL OR l.business_type = ANY($5))
+            ORDER BY l.score DESC
             LIMIT $6
             """,
             south, north, west, east, business_types, limit,
@@ -455,18 +476,58 @@ class LeadStore:
                 status = await conn.execute("DELETE FROM prospect_lists WHERE id = $1", list_id)
         return _affected(status) > 0
 
-    async def add_leads_to_list(self, list_id: str, lead_ids: list[str]) -> int:
+    async def add_leads_to_list(self, list_id: str, lead_ids: list[str]) -> dict[str, Any]:
+        """Ajoute des leads à une liste, en écartant les doublons "flous" —
+        même (nom, adresse) normalisés déjà présents dans CETTE liste sous un
+        `lead_id` technique différent (doublon OSM node/way, ou lead
+        redécouvert par un scan département). L'unicité exacte par `lead_id`
+        est déjà garantie par la clé primaire (list_id, lead_id).
+
+        Retourne {"added": n, "skipped": [lead_id, ...]}."""
+        if not lead_ids:
+            return {"added": 0, "skipped": []}
+
         now = datetime.now(timezone.utc).isoformat()
-        await self.pool.executemany(
+
+        existing = await self.pool.fetch(
             """
-            INSERT INTO list_leads (list_id, lead_id, status, added_at, updated_at)
-            VALUES ($1,$2,'a_contacter',$3,$4)
-            ON CONFLICT (list_id, lead_id) DO NOTHING
+            SELECT LOWER(TRIM(l.name)) AS norm_name, LOWER(TRIM(COALESCE(l.address, ''))) AS norm_address
+            FROM list_leads ll JOIN leads l ON l.id = ll.lead_id
+            WHERE ll.list_id = $1
             """,
-            [(list_id, lid, now, now) for lid in lead_ids],
+            list_id,
         )
-        await self.pool.execute("UPDATE prospect_lists SET updated_at = $1 WHERE id = $2", now, list_id)
-        return len(lead_ids)
+        seen_keys = {(r["norm_name"], r["norm_address"]) for r in existing}
+
+        candidates = await self.pool.fetch(
+            "SELECT id, LOWER(TRIM(name)) AS norm_name, LOWER(TRIM(COALESCE(address, ''))) AS norm_address "
+            "FROM leads WHERE id = ANY($1)",
+            lead_ids,
+        )
+        key_by_id = {r["id"]: (r["norm_name"], r["norm_address"]) for r in candidates}
+
+        to_insert: list[str] = []
+        skipped: list[str] = []
+        for lid in lead_ids:
+            key = key_by_id.get(lid)
+            if key is None or key in seen_keys:
+                skipped.append(lid)
+                continue
+            seen_keys.add(key)
+            to_insert.append(lid)
+
+        if to_insert:
+            await self.pool.executemany(
+                """
+                INSERT INTO list_leads (list_id, lead_id, status, added_at, updated_at)
+                VALUES ($1,$2,'a_contacter',$3,$4)
+                ON CONFLICT (list_id, lead_id) DO NOTHING
+                """,
+                [(list_id, lid, now, now) for lid in to_insert],
+            )
+            await self.pool.execute("UPDATE prospect_lists SET updated_at = $1 WHERE id = $2", now, list_id)
+
+        return {"added": len(to_insert), "skipped": skipped}
 
     async def remove_lead_from_list(self, list_id: str, lead_id: str) -> bool:
         now = datetime.now(timezone.utc).isoformat()

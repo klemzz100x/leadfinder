@@ -248,6 +248,29 @@ async def suggest_cities(q: str = Query(..., min_length=2)) -> list[dict]:
     return out
 
 
+@app.get("/api/departements/{code}/estimate")
+async def departement_estimate(code: str) -> dict:
+    """Estimation gratuite (API Geo gouv.fr, pas d'appel Overpass) du volume
+    d'un scan département avant de le lancer — nombre de communes et
+    population cumulée, pour piloter soi-même l'ordre et le rythme de
+    couverture plutôt que de tout scanner d'un coup."""
+    name = DEPARTEMENTS.get(code)
+    if not name:
+        raise HTTPException(404, f"Département inconnu : {code!r}")
+    communes: list[dict] = []
+    try:
+        resp = await _http.get(
+            f"https://geo.api.gouv.fr/departements/{code}/communes",
+            params={"fields": "nom,population"},
+        )
+        if resp.status_code == 200:
+            communes = resp.json()
+    except Exception as exc:
+        log.warning("Geo API estimate KO pour %r : %s", code, exc)
+    population = sum(c.get("population") or 0 for c in communes)
+    return {"code": code, "name": name, "communes": len(communes), "population": population}
+
+
 @app.get("/api/lists")
 async def get_lists() -> list[dict]:
     return await store.get_lists()
@@ -280,8 +303,10 @@ async def get_list_leads(list_id: str) -> list[dict]:
 
 @app.post("/api/lists/{list_id}/leads")
 async def add_leads_to_list(list_id: str, req: AddLeadsRequest) -> dict:
-    count = await store.add_leads_to_list(list_id, req.lead_ids)
-    return {"ok": True, "added": count}
+    """Ajoute des leads à une liste. Les doublons (même nom+adresse déjà dans
+    cette liste, id technique différent) sont écartés et renvoyés dans `skipped`."""
+    result = await store.add_leads_to_list(list_id, req.lead_ids)
+    return {"ok": True, "added": result["added"], "skipped": result["skipped"]}
 
 
 @app.delete("/api/lists/{list_id}/leads/{lead_id:path}")

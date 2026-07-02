@@ -6,6 +6,7 @@ export default function AddToListBtn({ lead, lists, onAdded }) {
   const [open, setOpen] = useState(false)
   const [adding, setAdding] = useState(null)
   const [done, setDone] = useState(null)
+  const [duplicate, setDuplicate] = useState(null)
   const [pos, setPos] = useState(null)
   const btnRef = useRef(null)
   const dropdownRef = useRef(null)
@@ -38,11 +39,19 @@ export default function AddToListBtn({ lead, lists, onAdded }) {
 
   const handleAdd = async (list) => {
     setAdding(list.id)
+    setDuplicate(null)
     try {
-      await addLeadsToList(list.id, [lead.id])
-      setDone(list.id)
-      onAdded?.(list)
-      setTimeout(() => { setDone(null); setOpen(false) }, 900)
+      const res = await addLeadsToList(list.id, [lead.id])
+      if (res.added > 0) {
+        setDone(list.id)
+        onAdded?.(list)
+        setTimeout(() => { setDone(null); setOpen(false) }, 900)
+      } else {
+        // Doublon (même nom+adresse déjà dans cette liste) : pas d'ajout,
+        // pas d'incrément du compteur — juste un retour visuel clair.
+        setDuplicate(list.id)
+        setTimeout(() => setDuplicate(null), 1800)
+      }
     } catch (e) {
       console.error(e)
     } finally {
@@ -70,11 +79,13 @@ export default function AddToListBtn({ lead, lists, onAdded }) {
           {lists.map(list => (
             <button
               key={list.id}
-              className={`atl-item${done === list.id ? ' atl-done' : ''}`}
+              className={`atl-item${done === list.id ? ' atl-done' : ''}${duplicate === list.id ? ' atl-duplicate' : ''}`}
               onClick={() => handleAdd(list)}
               disabled={!!adding}
+              title={duplicate === list.id ? 'Déjà présent dans cette liste' : undefined}
             >
-              {done === list.id ? '✓ ' : ''}{list.name}
+              {done === list.id && '✓ '}
+              {duplicate === list.id ? '⚠ Déjà présent' : list.name}
               <span className="atl-count">{list.lead_count}</span>
             </button>
           ))}

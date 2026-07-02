@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { fetchCategories, fetchDepartements, fetchVilleStats, scanArea } from '../api.js'
 import DepartementFilter from './DepartementFilter.jsx'
+import DeptScanEstimate from './DeptScanEstimate.jsx'
 import FranceMap from './FranceMap.jsx'
 
 export default function DepartementStatsView({ lists, onListsChange }) {
@@ -74,6 +75,7 @@ export default function DepartementStatsView({ lists, onListsChange }) {
           {selectedDepts.length > 0 ? (
             <>
               <p>Aucune donnée pour {selectedDeptNames} pour l'instant.</p>
+              <DeptScanEstimate codes={selectedDepts} />
               <button className="btn btn-scan" onClick={handleScanSelected} disabled={scanning}>
                 {scanning
                   ? 'Scan en cours…'

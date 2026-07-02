@@ -1,5 +1,6 @@
 import { googleMapsUrl } from '../utils.js'
 import AddToListBtn from './AddToListBtn.jsx'
+import { CONTACT_STATUS_COLOR, CONTACT_STATUS_LABEL } from '../statusColors.js'
 
 const TEMP_ICON = { chaud: '🔥', tiede: '🟠', froid: '❄️', a_verifier: '❓' }
 const TEMP_LABEL = { chaud: 'Chaud', tiede: 'Tiède', froid: 'Froid', a_verifier: 'À vérifier' }
@@ -18,6 +19,14 @@ export default function LeadMapPopup({ lead, lists, onListsChange }) {
         <span className={`temp-pill temp-${lead.temperature}`}>
           {TEMP_ICON[lead.temperature] || '?'} {TEMP_LABEL[lead.temperature] || lead.temperature}
         </span>
+        {lead.contact_status && (
+          <span
+            className="gmaps-badge"
+            style={{ background: `${CONTACT_STATUS_COLOR[lead.contact_status]}30`, color: CONTACT_STATUS_COLOR[lead.contact_status] }}
+          >
+            {CONTACT_STATUS_LABEL[lead.contact_status] || lead.contact_status}
+          </span>
+        )}
         {closedPermanently && <span className="gmaps-badge gmaps-closed">⛔ Fermé définitivement</span>}
       </div>
 

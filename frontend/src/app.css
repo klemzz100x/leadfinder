@@ -967,6 +967,7 @@ main { flex: 1; }
 }
 .atl-item:hover { background: var(--surface2); }
 .atl-item.atl-done { color: var(--green); }
+.atl-item.atl-duplicate { color: var(--tiede); }
 
 .atl-count {
   font-size: 0.75rem;
@@ -1262,10 +1263,6 @@ main { flex: 1; }
   transition: background 0.12s;
 }
 .llr-row:hover { background: var(--surface3); }
-.llr-row.status-group-won   { border-left-color: #22c55e; }
-.llr-row.status-group-devis { border-left-color: #f97316; }
-.llr-row.status-group-lost  { border-left-color: #ef4444; }
-.llr-row.status-group-pipeline { border-left-color: var(--surface2); }
 
 .llr-info {
   display: flex;
@@ -1599,6 +1596,13 @@ main { flex: 1; }
   gap: 0.85rem;
 }
 
+.dept-scan-estimate {
+  font-size: 0.85rem;
+  color: var(--accent2);
+  margin-top: 0.4rem;
+}
+.dept-scan-estimate-detail { color: var(--muted); }
+
 .dept-stats-layout {
   display: flex;
   gap: 1rem;
@@ -1675,6 +1679,35 @@ main { flex: 1; }
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
 }
 .map-back-btn:hover { background: var(--surface3); }
+
+.map-legend {
+  position: absolute;
+  bottom: 0.6rem;
+  left: 0.6rem;
+  z-index: 500;
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  border-radius: var(--radius-sm);
+  padding: 0.5rem 0.7rem;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.map-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: var(--text);
+  white-space: nowrap;
+}
+.map-legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
 
 /* Popup Leaflet — surcharge du thème clair par défaut pour matcher le thème sombre */
 .leaflet-popup-content-wrapper {
