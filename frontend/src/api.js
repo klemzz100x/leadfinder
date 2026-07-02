@@ -2,11 +2,15 @@ const BASE = '/api'
 
 // Scanne une ville, ou (sans ville) un ou plusieurs départements entiers.
 // Renvoie toujours une liste de résumés (un par zone scannée) — cf. mergeScanSummaries().
-export async function scanArea({ city, departements } = {}) {
+export async function scanArea({ city, departements, scannedBy } = {}) {
   const res = await fetch(`${BASE}/scan`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ city: city || null, departements: departements?.length ? departements : null }),
+    body: JSON.stringify({
+      city: city || null,
+      departements: departements?.length ? departements : null,
+      scanned_by: scannedBy || null,
+    }),
   })
   if (!res.ok) throw new Error(await res.text())
   return res.json()

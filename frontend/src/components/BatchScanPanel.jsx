@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { scanArea } from '../api.js'
+import { getCurrentUser } from '../identity.js'
 
 // Pause de politesse entre deux scans département consécutifs — en plus du
 // rate-limit Nominatim déjà respecté à l'intérieur d'un scan, ça évite
@@ -43,7 +44,7 @@ export default function BatchScanPanel({ codes, departements, onComplete }) {
       updateRow(code, { status: 'running' })
       console.info(`[scan par lot] Démarrage ${name} (${code}) — ${i + 1}/${codes.length}`)
       try {
-        const summaries = await scanArea({ departements: [code] })
+        const summaries = await scanArea({ departements: [code], scannedBy: getCurrentUser() || undefined })
         const total = summaries.reduce((s, x) => s + (x.total || 0), 0)
         if (total === 0) {
           console.warn(`[scan par lot] ${name} (${code}) : 0 business trouvé — probablement un échec Overpass silencieux, pas une vraie absence de commerces`)

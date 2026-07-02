@@ -61,6 +61,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 class ScanRequest(BaseModel):
     city: Optional[str] = None
     departements: Optional[list[str]] = None
+    scanned_by: Optional[str] = None  # identité légère (Daniel/Clément), pas une vraie auth
 
     @model_validator(mode="after")
     def _at_least_one(self) -> "ScanRequest":
@@ -99,6 +100,7 @@ class PatchListLeadRequest(BaseModel):
     notes: Optional[str] = None
     budget_propose: Optional[float] = None
     budget_final: Optional[float] = None
+    assigned_to: Optional[str] = None
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -115,14 +117,16 @@ async def scan(req: ScanRequest) -> list[ScanSummary]:
     chef-lieu), séquentiellement."""
     city = (req.city or "").strip()
     if city:
-        log.info("Requête de scan reçue : ville=%r", city)
+        log.info("Requête de scan reçue : ville=%r (par %r)", city, req.scanned_by)
         try:
-            return [await scan_city(city, store, http_client=_http)]
+            summary = await scan_city(city, store, http_client=_http)
         except Exception:
             log.exception("Scan ville %r KO", city)
             raise
+        await store.record_scan("ville", city.lower(), city, req.scanned_by, summary.total, summary.api_calls)
+        return [summary]
 
-    log.info("Requête de scan reçue : départements=%s", req.departements)
+    log.info("Requête de scan reçue : départements=%s (par %r)", req.departements, req.scanned_by)
     summaries: list[ScanSummary] = []
     for code in req.departements or []:
         log.info("Scan département %r : démarrage", code)
@@ -131,6 +135,8 @@ async def scan(req: ScanRequest) -> list[ScanSummary]:
             summaries.append(summary)
             log.info("Scan département %r : terminé — %d business, %d appels API",
                       code, summary.total, summary.api_calls)
+            dept_name = DEPARTEMENTS.get(code, code)
+            await store.record_scan("departement", code, dept_name, req.scanned_by, summary.total, summary.api_calls)
         except Exception:
             # Traceback complet en log (pas juste le message) : un département KO
             # ne doit jamais faire échouer les suivants du lot.
@@ -170,8 +176,21 @@ async def get_departements() -> list[dict]:
     """Liste officielle complète des départements (France métropolitaine),
     indépendante des scans déjà effectués — le sélecteur de filtre doit
     proposer les 95 départements dès l'arrivée sur la page, pas seulement
-    ceux déjà présents en base."""
-    return [{"code": code, "name": name} for code, name in sorted(DEPARTEMENTS.items())]
+    ceux déjà présents en base. Inclut la couverture de scan connue (base
+    partagée entre plusieurs utilisateurs : évite un re-scan à l'aveugle
+    d'un département déjà couvert par quelqu'un d'autre)."""
+    coverage = await store.get_departement_coverage()
+    out = []
+    for code, name in sorted(DEPARTEMENTS.items()):
+        cov = coverage.get(code)
+        out.append({
+            "code": code,
+            "name": name,
+            "last_scanned_at": cov["scanned_at"] if cov else None,
+            "last_scanned_by": cov["scanned_by"] if cov else None,
+            "last_scan_total": cov["total_found"] if cov else None,
+        })
+    return out
 
 
 @app.post("/api/leads/{lead_id:path}/audit")
@@ -334,6 +353,7 @@ async def patch_list_lead(list_id: str, lead_id: str, data: PatchListLeadRequest
     updated = await store.patch_list_lead(
         list_id, lead_id, status=data.status, notes=data.notes,
         budget_propose=data.budget_propose, budget_final=data.budget_final,
+        assigned_to=data.assigned_to,
     )
     if not updated:
         raise HTTPException(404, "Lead non trouvé dans cette liste")

@@ -15,6 +15,8 @@ import Dashboard from './components/Dashboard.jsx'
 import DepartementStatsView from './components/DepartementStatsView.jsx'
 import DeptScanEstimate from './components/DeptScanEstimate.jsx'
 import BatchScanPanel from './components/BatchScanPanel.jsx'
+import IdentityPicker from './components/IdentityPicker.jsx'
+import { getCurrentUser } from './identity.js'
 
 export default function App() {
   const [city, setCity]         = useState('')
@@ -62,9 +64,23 @@ export default function App() {
     if (!canScan) return
 
     if (!trimmed) {
-      // Département(s) seuls : scan par lot piloté (un département à la
-      // fois, résilient, avec suivi) plutôt qu'une seule requête bloquante
-      // sur tous les départements — évite les timeouts sur un gros lot.
+      // Département(s) seuls : base partagée entre plusieurs utilisateurs —
+      // si un département a déjà été scanné récemment (par soi ou par
+      // quelqu'un d'autre), on le signale avant de relancer un scan
+      // redondant (coût Overpass/Google Places).
+      const RESCAN_FRESHNESS_DAYS = 30
+      const now = Date.now()
+      const alreadyCovered = filter.departements
+        .map((code) => departements.find((d) => d.code === code))
+        .filter((d) => d?.last_scanned_at && (now - new Date(d.last_scanned_at).getTime()) < RESCAN_FRESHNESS_DAYS * 86400000)
+      if (alreadyCovered.length > 0) {
+        const list = alreadyCovered
+          .map((d) => `${d.name} (${d.last_scanned_at.slice(0, 10).split('-').reverse().join('/')}${d.last_scanned_by ? ' par ' + d.last_scanned_by : ''})`)
+          .join(', ')
+        if (!window.confirm(`Déjà scanné récemment : ${list}.\n\nRelancer quand même ?`)) return
+      }
+      // Scan par lot piloté (un département à la fois, résilient, avec
+      // suivi) plutôt qu'une seule requête bloquante — évite les timeouts.
       setError('')
       setBatchCodes(filter.departements)
       return
@@ -75,7 +91,7 @@ export default function App() {
     setSummary(null)
     setLeads([])
     try {
-      const summaries = await scanArea({ city: trimmed })
+      const summaries = await scanArea({ city: trimmed, scannedBy: getCurrentUser() || undefined })
       const merged = mergeScanSummaries(summaries)
       if (!merged) {
         setError('Le scan n\'a ramené aucun résultat exploitable.')
@@ -164,6 +180,7 @@ export default function App() {
               🗺️ Carte
             </button>
           </nav>
+          <IdentityPicker />
         </div>
 
         {tab === 'search' && (

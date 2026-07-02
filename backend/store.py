@@ -65,7 +65,28 @@ _ALTER_STATEMENTS = [
     # ── Phase 3 : budgets de closing (dashboard) ────────────────────────────
     "ALTER TABLE list_leads ADD COLUMN IF NOT EXISTS budget_propose REAL",
     "ALTER TABLE list_leads ADD COLUMN IF NOT EXISTS budget_final REAL",
+    # ── Usage partagé (Daniel/Clément) : visibilité, pas séparation des données ──
+    "ALTER TABLE list_leads ADD COLUMN IF NOT EXISTS assigned_to TEXT",
 ]
+
+# Historique des scans (ville ou département) — évite qu'un scan déjà fait
+# par une personne soit relancé sans le savoir par l'autre (base partagée,
+# mais aucune visibilité sur "qui a scanné quoi et quand" jusqu'ici).
+_CREATE_SCAN_HISTORY = """
+CREATE TABLE IF NOT EXISTS scan_history (
+    id          TEXT PRIMARY KEY,
+    area_type   TEXT NOT NULL,   -- 'ville' | 'departement'
+    area_code   TEXT NOT NULL,   -- code département, ou nom de ville normalisé
+    area_name   TEXT NOT NULL,
+    scanned_by  TEXT,
+    scanned_at  TEXT NOT NULL,
+    total_found INTEGER NOT NULL DEFAULT 0,
+    api_calls   INTEGER NOT NULL DEFAULT 0
+)
+"""
+_CREATE_IDX_SCAN_HISTORY = (
+    "CREATE INDEX IF NOT EXISTS idx_scan_history_area ON scan_history(area_type, area_code)"
+)
 
 # Prédicat du pipeline actif : exclut les leads déjà équipés (site trouvé côté
 # Google) et les établissements fermés définitivement. Réutilisé par les stats
@@ -130,6 +151,8 @@ class LeadStore:
             await conn.execute(_CREATE_IDX_TEMP)
             await conn.execute(_CREATE_PROSPECT_LISTS)
             await conn.execute(_CREATE_LIST_LEADS)
+            await conn.execute(_CREATE_SCAN_HISTORY)
+            await conn.execute(_CREATE_IDX_SCAN_HISTORY)
             for stmt in _ALTER_STATEMENTS:
                 await conn.execute(stmt)
         await self.backfill_postcodes()
@@ -234,6 +257,43 @@ class LeadStore:
 
         rows = await self.pool.fetch(sql, *values)
         return [dict(r) for r in rows]
+
+    # ── Historique des scans (visibilité partagée entre utilisateurs) ──────────
+
+    async def record_scan(
+        self, area_type: str, area_code: str, area_name: str,
+        scanned_by: Optional[str], total_found: int, api_calls: int,
+    ) -> None:
+        await self.pool.execute(
+            """
+            INSERT INTO scan_history (id, area_type, area_code, area_name, scanned_by, scanned_at, total_found, api_calls)
+            VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+            """,
+            str(uuid.uuid4()), area_type, area_code, area_name, scanned_by,
+            datetime.now(timezone.utc).isoformat(), total_found, api_calls,
+        )
+
+    async def get_departement_coverage(self) -> dict[str, dict[str, Any]]:
+        """Dernier scan connu par département — {code: {scanned_at, scanned_by,
+        total_found}}. Sert à afficher "déjà scanné le [date] par [qui]" avant
+        de relancer un scan déjà fait par l'autre utilisateur de la base
+        partagée."""
+        rows = await self.pool.fetch(
+            """
+            SELECT DISTINCT ON (area_code) area_code, scanned_at, scanned_by, total_found
+            FROM scan_history
+            WHERE area_type = 'departement'
+            ORDER BY area_code, scanned_at DESC
+            """
+        )
+        return {
+            r["area_code"]: {
+                "scanned_at": r["scanned_at"],
+                "scanned_by": r["scanned_by"],
+                "total_found": r["total_found"],
+            }
+            for r in rows
+        }
 
     async def stats_by_ville(
         self,
@@ -547,6 +607,7 @@ class LeadStore:
         notes: Optional[str] = None,
         budget_propose: Optional[float] = None,
         budget_final: Optional[float] = None,
+        assigned_to: Optional[str] = None,
     ) -> bool:
         now = datetime.now(timezone.utc).isoformat()
         sets: list[str] = ["updated_at = $1"]
@@ -569,6 +630,10 @@ class LeadStore:
         if budget_final is not None:
             values.append(budget_final)
             sets.append(f"budget_final = ${len(values)}")
+        if assigned_to is not None:
+            # Chaîne vide = "non assigné" explicite (distinct de "ne pas modifier").
+            values.append(assigned_to or None)
+            sets.append(f"assigned_to = ${len(values)}")
 
         values.extend([list_id, lead_id])
         sql = (
@@ -585,7 +650,7 @@ class LeadStore:
         rows = await self.pool.fetch("""
             SELECT l.*, ll.status AS list_status, ll.notes AS list_notes,
                    ll.added_at, ll.updated_at AS ll_updated_at, ll.closed_at,
-                   ll.budget_propose, ll.budget_final
+                   ll.budget_propose, ll.budget_final, ll.assigned_to
             FROM list_leads ll
             JOIN leads l ON l.id = ll.lead_id
             WHERE ll.list_id = $1

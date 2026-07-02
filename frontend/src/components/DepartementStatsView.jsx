@@ -36,6 +36,19 @@ export default function DepartementStatsView({ lists, onListsChange }) {
 
   const handleScanSelected = () => {
     if (selectedDepts.length === 0) return
+    // Base partagée : signale si un département sélectionné a déjà été
+    // scanné récemment (par soi ou par quelqu'un d'autre) avant de relancer.
+    const RESCAN_FRESHNESS_DAYS = 30
+    const now = Date.now()
+    const alreadyCovered = selectedDepts
+      .map((code) => departements.find((d) => d.code === code))
+      .filter((d) => d?.last_scanned_at && (now - new Date(d.last_scanned_at).getTime()) < RESCAN_FRESHNESS_DAYS * 86400000)
+    if (alreadyCovered.length > 0) {
+      const list = alreadyCovered
+        .map((d) => `${d.name} (${d.last_scanned_at.slice(0, 10).split('-').reverse().join('/')}${d.last_scanned_by ? ' par ' + d.last_scanned_by : ''})`)
+        .join(', ')
+      if (!window.confirm(`Déjà scanné récemment : ${list}.\n\nRelancer quand même ?`)) return
+    }
     setError('')
     setBatchCodes(selectedDepts)
   }

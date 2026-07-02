@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { googleMapsUrl } from '../utils.js'
 import { CONTACT_STATUS_COLOR } from '../statusColors.js'
+import { USERS } from '../identity.js'
 
 export const STATUSES = [
   { value: 'a_contacter',   label: 'À contacter',   color: '#60a5fa' },
@@ -16,7 +17,7 @@ export const STATUSES = [
 
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.value, s]))
 
-export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesChange, onBudgetChange }) {
+export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesChange, onBudgetChange, onAssignChange }) {
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState(lead.list_notes || '')
   const [saving, setSaving] = useState(false)
@@ -30,6 +31,10 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
     setSaving(true)
     try { await onStatusChange(e.target.value) }
     finally { setSaving(false) }
+  }
+
+  const handleAssign = async (e) => {
+    await onAssignChange?.(e.target.value)
   }
 
   const handleSaveNotes = async () => {
@@ -82,6 +87,19 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
             )}
           </div>
         )}
+        <div className="llr-assign-col">
+          <select
+            className="llr-assign-select"
+            value={lead.assigned_to || ''}
+            onChange={handleAssign}
+            title="Attribué à (visibilité partagée, pas un accès restreint)"
+          >
+            <option value="">— Non assigné</option>
+            {USERS.map((u) => (
+              <option key={u} value={u}>{u}</option>
+            ))}
+          </select>
+        </div>
         <div className="llr-status-col">
           <select
             className="status-select"

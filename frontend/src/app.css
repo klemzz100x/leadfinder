@@ -270,6 +270,13 @@ body { min-height: 100vh; }
   font-size: 0.85rem;
   cursor: pointer;
 }
+.dept-filter-item-name { flex: 1; }
+.dept-filter-coverage {
+  font-size: 0.7rem;
+  color: var(--green, #22c55e);
+  white-space: nowrap;
+  flex-shrink: 0;
+}
 .dept-filter-clear {
   width: 100%;
   margin-bottom: 0.3rem;
@@ -866,6 +873,17 @@ main { flex: 1; }
   flex-wrap: wrap;
 }
 
+.identity-picker {
+  padding: 0.4rem 0.7rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--surface2);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .main-tabs {
   display: flex;
   gap: 0.25rem;
@@ -1253,7 +1271,7 @@ main { flex: 1; }
 /* ── List lead row ── */
 .llr-row {
   display: grid;
-  grid-template-columns: 1fr auto auto auto auto;
+  grid-template-columns: 1fr auto auto auto auto auto;
   align-items: center;
   gap: 0.75rem;
   padding: 0.65rem 1rem;
@@ -1322,6 +1340,19 @@ main { flex: 1; }
 }
 
 .llr-status-col { flex-shrink: 0; }
+.llr-assign-col { flex-shrink: 0; }
+.llr-assign-select {
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--surface2);
+  background: var(--bg);
+  color: var(--muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  min-width: 110px;
+  font-family: inherit;
+}
+.llr-assign-select:focus { outline: none; border-color: var(--accent); }
 
 .status-select {
   padding: 0.3rem 0.6rem;
@@ -1464,12 +1495,13 @@ main { flex: 1; }
   }
   .llr-phone,
   .llr-budget-col,
+  .llr-assign-col,
   .llr-status-col,
   .llr-actions {
     justify-content: flex-start;
     width: 100%;
   }
-  .status-select { width: 100%; min-height: 2.5rem; }
+  .status-select, .llr-assign-select { width: 100%; min-height: 2.5rem; }
   .llr-budget-input { flex: 1; width: auto; }
 
   /* ── Dashboard ── */

@@ -45,7 +45,16 @@ export default function DepartementFilter({ departements, selected, onChange }) 
                 checked={selected.includes(d.code)}
                 onChange={() => toggle(d.code)}
               />
-              {d.code} — {d.name}
+              <span className="dept-filter-item-name">{d.code} — {d.name}</span>
+              {d.last_scanned_at && (
+                <span
+                  className="dept-filter-coverage"
+                  title={`Dernier scan par ${d.last_scanned_by || '?'} — ${d.last_scan_total ?? '?'} business trouvés`}
+                >
+                  ✓ {d.last_scanned_at.slice(0, 10).split('-').reverse().join('/')}
+                  {d.last_scanned_by ? ` (${d.last_scanned_by})` : ''}
+                </span>
+              )}
             </label>
           ))}
         </div>
