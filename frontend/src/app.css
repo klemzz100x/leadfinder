@@ -450,19 +450,6 @@ main { flex: 1; }
   background: rgba(124, 58, 237, 0.06);
 }
 
-/* Créneau d'appel indicatif — visible mais volontairement plus discret que
-   "Déjà appelé" (indication de priorisation, pas une alerte). */
-.creneau-badge {
-  font-size: 0.72rem;
-  font-weight: 600;
-  padding: 0.15rem 0.5rem;
-  border-radius: 999px;
-  white-space: nowrap;
-  background: rgba(59, 130, 246, 0.12);
-  color: var(--accent);
-  border: 1px solid rgba(59, 130, 246, 0.3);
-}
-
 /* Bouton + popup dédié (menu des listes) : plus visible qu'un simple badge,
    le but explicite de la demande étant de "mieux mettre en avant" l'info. */
 .creneau-btn-wrap { display: inline-block; }
@@ -470,18 +457,19 @@ main { flex: 1; }
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.75rem;
+  font-size: 0.8rem;
   font-weight: 700;
-  padding: 0.2rem 0.6rem;
+  padding: 0.3rem 0.75rem;
   margin-top: 0.25rem;
   border-radius: 999px;
-  background: rgba(59, 130, 246, 0.15);
-  color: var(--accent);
-  border: 1px solid rgba(59, 130, 246, 0.4);
+  background: #f97316;
+  color: #fff;
+  border: none;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3);
   cursor: pointer;
   white-space: nowrap;
 }
-.creneau-btn:hover { background: rgba(59, 130, 246, 0.25); }
+.creneau-btn:hover { background: #ea580c; }
 
 .creneau-popup {
   background: var(--surface);
@@ -504,7 +492,7 @@ main { flex: 1; }
 .creneau-popup-time {
   font-size: 1.3rem;
   font-weight: 800;
-  color: var(--accent);
+  color: #f97316;
 }
 .creneau-popup-type {
   font-size: 0.8rem;
@@ -648,6 +636,23 @@ main { flex: 1; }
 }
 .lead-phone a:hover { color: #fff; text-decoration: underline; }
 .no-phone { color: var(--muted); font-size: 0.82rem; }
+
+/* Créneau d'appel : mis en avant juste sous le téléphone (là où l'œil va
+   déjà pour appeler), couleur dédiée non réutilisée ailleurs pour ne pas se
+   fondre dans les autres badges de la card. */
+.creneau-highlight {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  align-self: flex-start;
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: #f97316;
+  color: #fff;
+  box-shadow: 0 0 0 2px rgba(249, 115, 22, 0.3);
+}
 
 /* Call button — vert vif proéminent */
 .btn-call {

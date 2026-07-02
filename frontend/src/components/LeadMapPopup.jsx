@@ -28,11 +28,6 @@ export default function LeadMapPopup({ lead, lists, onListsChange, creneau }) {
           </span>
         )}
         {closedPermanently && <span className="gmaps-badge gmaps-closed">⛔ Fermé définitivement</span>}
-        {creneau && (
-          <span className="creneau-badge" title="Créneau indicatif, à ajuster selon retour terrain — n'empêche pas d'appeler en dehors">
-            📞 {creneau}
-          </span>
-        )}
       </div>
 
       <div className="map-popup-name">{lead.name}</div>
@@ -43,6 +38,16 @@ export default function LeadMapPopup({ lead, lists, onListsChange, creneau }) {
           ? <a className="map-popup-link" href={`tel:${lead.phone}`}>📞 {lead.phone}</a>
           : <span className="map-popup-muted">Pas de téléphone</span>}
       </div>
+      {creneau && (
+        <div className="map-popup-row">
+          <span
+            className="creneau-highlight"
+            title="Créneau indicatif, à ajuster selon retour terrain — n'empêche pas d'appeler en dehors"
+          >
+            🕐 Appeler entre {creneau}
+          </span>
+        </div>
+      )}
 
       <div className="map-popup-row">
         {website

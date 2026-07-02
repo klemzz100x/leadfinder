@@ -95,11 +95,6 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
               ☎️ Déjà appelé
             </span>
           )}
-          {creneau && (
-            <span className="creneau-badge" title="Créneau indicatif, à ajuster selon retour terrain — n'empêche pas d'appeler en dehors">
-              📞 {creneau}
-            </span>
-          )}
           <span className={`web-badge status-${lead.web_status}`}>
             {STATUS_LABEL[lead.web_status] || lead.web_status}
           </span>
@@ -135,6 +130,14 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
                 : <span className="no-phone">Pas de tél.</span>
               }
             </span>
+            {creneau && (
+              <span
+                className="creneau-highlight"
+                title="Créneau indicatif, à ajuster selon retour terrain — n'empêche pas d'appeler en dehors"
+              >
+                🕐 Appeler entre {creneau}
+              </span>
+            )}
             {lead.website && (
               <a
                 className="lead-website"
