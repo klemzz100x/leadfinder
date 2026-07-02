@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8" />
+<title>{{NUMERO}}</title>
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: #f2f1ef;
+    color: #111;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
+  }
+  .page {
+    width: 210mm;
+    min-height: 297mm;
+    padding: 18mm 16mm;
+  }
+  .title {
+    font-size: 42px;
+    font-weight: 800;
+    letter-spacing: -1px;
+    margin: 0 0 8px 0;
+  }
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 34px;
+  }
+  .top-meta {
+    text-align: right;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .top-meta b { font-weight: 700; }
+
+  .parties {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+    margin-bottom: 40px;
+  }
+  .party { flex: 1; }
+  .party.right { text-align: right; }
+  .party h3 { font-size: 17px; font-weight: 700; margin: 0 0 10px 0; }
+  .party p { margin: 2px 0; font-size: 13px; line-height: 1.5; }
+
+  h2.section {
+    font-size: 26px;
+    font-weight: 800;
+    margin: 0 0 10px 0;
+  }
+  .rule { border: none; border-top: 1.5px solid #111; margin: 0 0 18px 0; }
+
+  table.lines { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+  table.lines td { padding: 10px 0; font-size: 14px; vertical-align: top; }
+  table.lines td.price { text-align: right; white-space: nowrap; }
+
+  .totals { margin-top: 18px; text-align: right; }
+  .totals .row { font-size: 15px; font-weight: 700; margin: 4px 0; }
+  .totals .row .label { display: inline-block; min-width: 140px; text-align: left; }
+  .totals .tva-note { font-size: 11px; font-weight: 400; color: #444; margin-top: 6px; }
+
+  .footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 40px;
+    margin-top: 90px;
+  }
+  .footer .col { flex: 1; font-size: 13px; }
+  .footer h4 { font-size: 14px; font-weight: 700; margin: 0 0 8px 0; }
+  .footer .col.right { text-align: center; }
+  .signature-line {
+    margin-top: 60px;
+    border-top: 1px solid #111;
+    width: 220px;
+    display: inline-block;
+  }
+</style>
+</head>
+<body>
+  <div class="page">
+    <div class="top-row">
+      <div><h1 class="title">{{NUMERO}}</h1></div>
+      <div class="top-meta">
+        <div><b>Date du devis</b> : {{DATE}}</div>
+        <div><b>Validité du devis</b> : {{VALIDITE}}</div>
+      </div>
+    </div>
+
+    <div class="parties">
+      <div class="party">
+        <h3>{{EMETTEUR_NOM}}</h3>
+        <p>siren : {{EMETTEUR_SIREN}}</p>
+        <p>{{EMETTEUR_EMAIL}}</p>
+        <p>{{EMETTEUR_ADRESSE}}</p>
+      </div>
+      <div class="party right">
+        <h3>A l'attention de</h3>
+        <p>{{CLIENT_NOM}}</p>
+        <p>{{CLIENT_SIRET_LABEL}}</p>
+        <p>{{CLIENT_ADRESSE}}</p>
+      </div>
+    </div>
+
+    <h2 class="section">Description</h2>
+    <hr class="rule" />
+    <table class="lines">
+      {{LIGNES}}
+    </table>
+    <hr class="rule" />
+
+    <div class="totals">
+      <div class="row"><span class="label">Sous total :</span> {{SOUS_TOTAL}}</div>
+      <div class="row"><span class="label">TOTAL :</span> {{TOTAL}}</div>
+      <div class="tva-note">TVA non applicable – article 293B du CGI</div>
+    </div>
+
+    <div class="footer">
+      <div class="col">
+        <h4>Termes et conditions</h4>
+        <p>{{TERMES}}</p>
+      </div>
+      <div class="col right">
+        <h4>Signature suivie de la mention<br />"bon pour accord"</h4>
+        <span class="signature-line">&nbsp;</span>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

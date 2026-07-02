@@ -37,6 +37,10 @@ node_modules/
 site-web/sites-generes/*
 !site-web/sites-generes/.gitkeep
 
+# Devis générés (livrables clients, contiennent des infos personnelles réelles)
+site-web/devis/generes/*
+!site-web/devis/generes/.gitkeep
+
 # OS
 .DS_Store
 Thumbs.db
