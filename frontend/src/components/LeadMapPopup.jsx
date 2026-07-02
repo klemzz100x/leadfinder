@@ -64,6 +64,7 @@ export default function LeadMapPopup({ lead, lists, onListsChange }) {
           onAdded={(list) => onListsChange?.(prev =>
             prev.map(l => l.id === list.id ? { ...l, lead_count: (l.lead_count || 0) + 1 } : l)
           )}
+          onListCreated={(list) => onListsChange?.(prev => [list, ...prev])}
         />
       </div>
     </div>

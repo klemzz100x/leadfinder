@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import {
-  createList, deleteList,
+  createList, deleteList, renameList,
   fetchListLeads, fetchListStats,
   removeLeadFromList, patchListLead,
 } from '../api.js'
@@ -14,6 +14,8 @@ export default function ListsView({ lists, onListsChange }) {
   const [loading, setLoading]       = useState(false)
   const [newName, setNewName]       = useState('')
   const [statusFilter, setFilter]   = useState('')
+  const [renamingId, setRenamingId] = useState(null)
+  const [renameValue, setRenameValue] = useState('')
 
   const loadList = useCallback(async (list) => {
     setSelected(list)
@@ -60,6 +62,21 @@ export default function ListsView({ lists, onListsChange }) {
     await deleteList(list.id)
     onListsChange(lists.filter(l => l.id !== list.id))
     if (selected?.id === list.id) { setSelected(null); setListLeads([]); setStats(null) }
+  }
+
+  const startRename = (list, e) => {
+    e.stopPropagation()
+    setRenamingId(list.id)
+    setRenameValue(list.name)
+  }
+
+  const commitRename = async (list) => {
+    const trimmed = renameValue.trim()
+    setRenamingId(null)
+    if (!trimmed || trimmed === list.name) return
+    await renameList(list.id, trimmed)
+    onListsChange(lists.map(l => l.id === list.id ? { ...l, name: trimmed } : l))
+    if (selected?.id === list.id) setSelected(prev => ({ ...prev, name: trimmed }))
   }
 
   const handleStatusChange = async (lead, status) => {
@@ -118,10 +135,28 @@ export default function ListsView({ lists, onListsChange }) {
             <div
               key={list.id}
               className={`list-nav-item${selected?.id === list.id ? ' active' : ''}`}
-              onClick={() => loadList(list)}
+              onClick={() => renamingId !== list.id && loadList(list)}
             >
-              <span className="list-nav-name">{list.name}</span>
+              {renamingId === list.id ? (
+                <input
+                  className="list-nav-rename-input"
+                  autoFocus
+                  value={renameValue}
+                  onChange={e => setRenameValue(e.target.value)}
+                  onClick={e => e.stopPropagation()}
+                  onBlur={() => commitRename(list)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') { e.preventDefault(); commitRename(list) }
+                    if (e.key === 'Escape') setRenamingId(null)
+                  }}
+                />
+              ) : (
+                <span className="list-nav-name">{list.name}</span>
+              )}
               <span className="list-nav-count">{list.lead_count}</span>
+              {renamingId !== list.id && (
+                <button className="list-nav-rename" onClick={e => startRename(list, e)} title="Renommer">✏️</button>
+              )}
               <button className="list-nav-del" onClick={e => handleDelete(list, e)} title="Supprimer">×</button>
             </div>
           ))}

@@ -247,7 +247,8 @@ export default function App() {
           <main>
             {!resultsLoaded && !scanning && (
               <p className="empty">
-                Sélectionnez un ou plusieurs départements, ou lancez une recherche par ville.
+                Filtrez par température et/ou type d'activité (ex : tous les salons de beauté "chauds" de France, sans rien
+                cocher d'autre), affinez par département, ou lancez une recherche/un scan par ville.
               </p>
             )}
             {resultsLoaded && leads.length === 0 && !scanning && (

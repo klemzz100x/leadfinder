@@ -108,6 +108,16 @@ export async function deleteList(id) {
   return res.json()
 }
 
+export async function renameList(id, name) {
+  const res = await fetch(`${BASE}/lists/${encodeURIComponent(id)}`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name }),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
 export async function fetchListLeads(listId) {
   const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/leads`)
   if (!res.ok) return []

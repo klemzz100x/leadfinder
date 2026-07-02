@@ -123,20 +123,32 @@ function ZoomWatcher({ onViewportChange }) {
 export default function FranceMap({ villeStats, activite, selectedVille, onSelectVille, lists, onListsChange }) {
   const [viewport, setViewport] = useState({ drilledIn: false, bounds: null })
   const [preciseLeads, setPreciseLeads] = useState([])
+  // Distinct de `preciseLeads.length > 0` : une zone dézoomée-puis-zoomée peut
+  // légitimement n'avoir aucun lead chaud. Sans ce flag, les bulles macro
+  // disparaissent dès le franchissement du zoom (rendu conditionnel sur
+  // `drilledIn`) alors que le fetch des marqueurs précis est encore en vol —
+  // trou visuel où plus rien n'est affiché, qui ressemble à des leads qui
+  // disparaissent. On garde les bulles jusqu'à ce que le premier fetch de la
+  // session "zoomée" ait abouti, puis on bascule proprement.
+  const [preciseReady, setPreciseReady] = useState(false)
 
   const maxChauds = Math.max(1, ...villeStats.map((v) => v.chauds))
 
   useEffect(() => {
     if (!viewport.drilledIn || !viewport.bounds) {
       setPreciseLeads([])
+      setPreciseReady(false)
       return
     }
     let cancelled = false
     fetchLeadsInBounds({ activite, bounds: viewport.bounds })
-      .then((data) => { if (!cancelled) setPreciseLeads(data) })
-      .catch(() => { if (!cancelled) setPreciseLeads([]) })
+      .then((data) => { if (!cancelled) { setPreciseLeads(data); setPreciseReady(true) } })
+      .catch(() => { if (!cancelled) { setPreciseLeads([]); setPreciseReady(true) } })
     return () => { cancelled = true }
   }, [viewport, activite])
+
+  const showBubbles = !viewport.drilledIn || !preciseReady
+  const showPrecise = viewport.drilledIn && preciseReady
 
   return (
     <MapContainer center={FRANCE_CENTER} zoom={FRANCE_ZOOM} scrollWheelZoom className="dept-map">
@@ -147,9 +159,9 @@ export default function FranceMap({ villeStats, activite, selectedVille, onSelec
       <ZoomWatcher onViewportChange={setViewport} />
       <FlyToVille selectedVille={selectedVille} villeStats={villeStats} />
       <BackToFranceButton />
-      {viewport.drilledIn && <MicroLegend />}
+      {showPrecise && <MicroLegend />}
 
-      {!viewport.drilledIn && (
+      {showBubbles && (
         <MarkerClusterGroup iconCreateFunction={clusterIcon} showCoverageOnHover={false}>
           {villeStats.map((v) => (
             <Marker
@@ -165,7 +177,7 @@ export default function FranceMap({ villeStats, activite, selectedVille, onSelec
         </MarkerClusterGroup>
       )}
 
-      {viewport.drilledIn && preciseLeads.map((lead) => {
+      {showPrecise && preciseLeads.map((lead) => {
         // Un point reste rouge (chaud, non traité) tant qu'aucun contact n'a
         // été enregistré dans une liste, puis prend la couleur du statut le
         // plus avancé une fois traité (ex: vert une fois "devis fait").
