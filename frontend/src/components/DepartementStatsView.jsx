@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { fetchCategories, fetchDepartements, fetchVilleStats, scanArea } from '../api.js'
+import { fetchCategories, fetchDepartements, fetchVilleStats } from '../api.js'
 import DepartementFilter from './DepartementFilter.jsx'
 import DeptScanEstimate from './DeptScanEstimate.jsx'
+import BatchScanPanel from './BatchScanPanel.jsx'
 import FranceMap from './FranceMap.jsx'
 
 export default function DepartementStatsView({ lists, onListsChange }) {
@@ -13,7 +14,7 @@ export default function DepartementStatsView({ lists, onListsChange }) {
   const [selected, setSelected] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const [scanning, setScanning] = useState(false)
+  const [batchCodes, setBatchCodes] = useState(null)
   const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
@@ -33,18 +34,14 @@ export default function DepartementStatsView({ lists, onListsChange }) {
       .finally(() => setLoading(false))
   }, [activite, selectedDepts, refreshKey])
 
-  const handleScanSelected = async () => {
+  const handleScanSelected = () => {
     if (selectedDepts.length === 0) return
-    setScanning(true)
     setError('')
-    try {
-      await scanArea({ departements: selectedDepts })
-      setRefreshKey((k) => k + 1)
-    } catch (e) {
-      setError(e.message)
-    } finally {
-      setScanning(false)
-    }
+    setBatchCodes(selectedDepts)
+  }
+
+  const handleBatchComplete = () => {
+    setRefreshKey((k) => k + 1)
   }
 
   const selectedDeptNames = selectedDepts
@@ -63,7 +60,7 @@ export default function DepartementStatsView({ lists, onListsChange }) {
         <DepartementFilter
           departements={departements}
           selected={selectedDepts}
-          onChange={setSelectedDepts}
+          onChange={(codes) => { setSelectedDepts(codes); setBatchCodes(null) }}
         />
       </div>
 
@@ -73,15 +70,21 @@ export default function DepartementStatsView({ lists, onListsChange }) {
       {!loading && !error && stats.length === 0 && (
         <div className="dept-stats-empty">
           {selectedDepts.length > 0 ? (
-            <>
-              <p>Aucune donnée pour {selectedDeptNames} pour l'instant.</p>
-              <DeptScanEstimate codes={selectedDepts} />
-              <button className="btn btn-scan" onClick={handleScanSelected} disabled={scanning}>
-                {scanning
-                  ? 'Scan en cours…'
-                  : `🔍 Scanner ${selectedDepts.length > 1 ? 'ces départements' : 'ce département'}`}
-              </button>
-            </>
+            batchCodes ? (
+              <BatchScanPanel
+                codes={batchCodes}
+                departements={departements}
+                onComplete={handleBatchComplete}
+              />
+            ) : (
+              <>
+                <p>Aucune donnée pour {selectedDeptNames} pour l'instant.</p>
+                <DeptScanEstimate codes={selectedDepts} />
+                <button className="btn btn-scan" onClick={handleScanSelected}>
+                  🔍 Scanner {selectedDepts.length > 1 ? 'ces départements' : 'ce département'}
+                </button>
+              </>
+            )
           ) : (
             <p>Aucun lead chaud pour ce filtre.</p>
           )}

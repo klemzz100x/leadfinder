@@ -14,6 +14,7 @@ import ListsView from './components/ListsView.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import DepartementStatsView from './components/DepartementStatsView.jsx'
 import DeptScanEstimate from './components/DeptScanEstimate.jsx'
+import BatchScanPanel from './components/BatchScanPanel.jsx'
 
 export default function App() {
   const [city, setCity]         = useState('')
@@ -25,6 +26,7 @@ export default function App() {
   const [departements, setDepartements] = useState([])
   const [resultsLoaded, setResultsLoaded] = useState(false)
   const [error, setError]       = useState('')
+  const [batchCodes, setBatchCodes] = useState(null)
 
   const [viewMode, setViewMode]                 = useState('list')
   const [categories, setCategories]             = useState({})
@@ -58,15 +60,22 @@ export default function App() {
   const handleScan = async () => {
     const trimmed = city.trim()
     if (!canScan) return
+
+    if (!trimmed) {
+      // Département(s) seuls : scan par lot piloté (un département à la
+      // fois, résilient, avec suivi) plutôt qu'une seule requête bloquante
+      // sur tous les départements — évite les timeouts sur un gros lot.
+      setError('')
+      setBatchCodes(filter.departements)
+      return
+    }
+
     setError('')
     setScanning(true)
     setSummary(null)
     setLeads([])
     try {
-      const summaries = await scanArea({
-        city: trimmed || undefined,
-        departements: trimmed ? undefined : filter.departements,
-      })
+      const summaries = await scanArea({ city: trimmed })
       const merged = mergeScanSummaries(summaries)
       if (!merged) {
         setError('Le scan n\'a ramené aucun résultat exploitable.')
@@ -81,12 +90,17 @@ export default function App() {
     }
   }
 
+  const handleBatchComplete = async () => {
+    await loadLeads('', filter)
+  }
+
   // Le filtre (notamment le sélecteur de département) est utilisable dès
   // l'arrivée sur la page, sans attendre un scan : il interroge directement
   // les leads déjà en base. Combiné à une ville tapée (scannée ou non), les
   // deux critères s'appliquent ensemble via /api/leads.
   const handleFilterChange = async (newFilter) => {
     setFilter(newFilter)
+    setBatchCodes(null)
     await loadLeads(city.trim(), newFilter)
   }
 
@@ -161,7 +175,23 @@ export default function App() {
               scanning={scanning}
               canScan={canScan}
             />
-            {!city.trim() && <DeptScanEstimate codes={filter.departements} />}
+            {!city.trim() && !batchCodes && <DeptScanEstimate codes={filter.departements} />}
+            {batchCodes && (
+              <div className="batch-scan-wrap">
+                <button
+                  className="modal-close batch-scan-close"
+                  onClick={() => setBatchCodes(null)}
+                  title="Fermer"
+                >
+                  ✕
+                </button>
+                <BatchScanPanel
+                  codes={batchCodes}
+                  departements={departements}
+                  onComplete={handleBatchComplete}
+                />
+              </div>
+            )}
           </>
         )}
         {error && <p className="error">{error}</p>}

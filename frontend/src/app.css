@@ -1603,6 +1603,58 @@ main { flex: 1; }
 }
 .dept-scan-estimate-detail { color: var(--muted); }
 
+/* ── Scan par lot (plusieurs départements, un à la fois, avec suivi) ────── */
+
+.batch-scan-wrap {
+  position: relative;
+  margin-top: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: var(--surface);
+  border: 1px solid var(--surface2);
+  border-radius: var(--radius-sm);
+}
+.batch-scan-close {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.4rem;
+}
+
+.batch-scan-panel { display: flex; flex-direction: column; gap: 0.6rem; width: 100%; }
+
+.batch-scan-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.batch-scan-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  max-height: 260px;
+  overflow-y: auto;
+}
+.batch-scan-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+}
+.batch-scan-row.batch-scan-running { background: rgba(59, 130, 246, 0.1); }
+.batch-scan-row.batch-scan-ok { background: rgba(34, 197, 94, 0.08); }
+.batch-scan-row.batch-scan-error { background: rgba(239, 68, 68, 0.1); }
+.batch-scan-icon { flex-shrink: 0; }
+.batch-scan-name { flex: 1; color: var(--text); }
+.batch-scan-count { color: var(--muted); font-size: 0.78rem; }
+.batch-scan-error { color: var(--chaud); font-size: 0.78rem; cursor: help; }
+
 .dept-stats-layout {
   display: flex;
   gap: 1rem;

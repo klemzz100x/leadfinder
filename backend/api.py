@@ -115,14 +115,27 @@ async def scan(req: ScanRequest) -> list[ScanSummary]:
     chef-lieu), séquentiellement."""
     city = (req.city or "").strip()
     if city:
-        return [await scan_city(city, store, http_client=_http)]
+        log.info("Requête de scan reçue : ville=%r", city)
+        try:
+            return [await scan_city(city, store, http_client=_http)]
+        except Exception:
+            log.exception("Scan ville %r KO", city)
+            raise
 
+    log.info("Requête de scan reçue : départements=%s", req.departements)
     summaries: list[ScanSummary] = []
     for code in req.departements or []:
+        log.info("Scan département %r : démarrage", code)
         try:
-            summaries.append(await scan_departement(code, store, http_client=_http))
-        except Exception as exc:
-            log.error("Scan département %r KO : %s", code, exc)
+            summary = await scan_departement(code, store, http_client=_http)
+            summaries.append(summary)
+            log.info("Scan département %r : terminé — %d business, %d appels API",
+                      code, summary.total, summary.api_calls)
+        except Exception:
+            # Traceback complet en log (pas juste le message) : un département KO
+            # ne doit jamais faire échouer les suivants du lot.
+            log.exception("Scan département %r KO", code)
+    log.info("Scan par lot terminé : %d/%d départements réussis", len(summaries), len(req.departements or []))
     return summaries
 
 
