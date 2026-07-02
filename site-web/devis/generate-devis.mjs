@@ -99,11 +99,13 @@ function buildHtml(template, client) {
   return html;
 }
 
-export async function generateDevis({ name, address, siret }) {
+export async function generateDevis({ name, address, siret, numero }) {
   fs.mkdirSync(OUT_DIR, { recursive: true });
   const template = fs.readFileSync(path.join(__dirname, 'template.html'), 'utf-8');
 
-  const num = nextDevisNumber();
+  // --numero permet de régénérer un devis existant (correction de SIRET,
+  // etc.) sans créer un trou dans la numérotation.
+  const num = numero ? parseInt(numero, 10) : nextDevisNumber();
   const numeroLabel = `DEVIS #${String(num).padStart(2, '0')}`;
   const slug = slugify(name);
   const fichier = `devis-${String(num).padStart(2, '0')}-${slug}.pdf`;
@@ -131,10 +133,10 @@ export async function generateDevis({ name, address, siret }) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = parseArgs(process.argv.slice(2));
   if (!args.name || !args.address) {
-    console.error('Usage : node generate-devis.mjs --name "Nom entreprise" --address "Adresse complète" [--siret "..."]');
+    console.error('Usage : node generate-devis.mjs --name "Nom entreprise" --address "Adresse complète" [--siret "..."] [--numero N]');
     process.exit(1);
   }
-  generateDevis({ name: args.name, address: args.address, siret: args.siret }).catch((err) => {
+  generateDevis({ name: args.name, address: args.address, siret: args.siret, numero: args.numero }).catch((err) => {
     console.error(err);
     process.exit(1);
   });
