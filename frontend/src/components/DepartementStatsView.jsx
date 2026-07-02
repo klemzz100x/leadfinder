@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
-import { fetchCategories, fetchDeptStats } from '../api.js'
-import DepartementMap from './DepartementMap.jsx'
+import { fetchCategories, fetchVilleStats } from '../api.js'
+import FranceMap from './FranceMap.jsx'
 
-export default function DepartementStatsView() {
+export default function DepartementStatsView({ lists, onListsChange }) {
   const [categories, setCategories] = useState({})
   const [activite, setActivite] = useState('')
   const [stats, setStats] = useState([])
@@ -17,7 +17,7 @@ export default function DepartementStatsView() {
   useEffect(() => {
     setLoading(true)
     setError('')
-    fetchDeptStats(activite)
+    fetchVilleStats(activite)
       .then((data) => { setStats(data); setSelected(null) })
       .catch((e) => setError(e.message))
       .finally(() => setLoading(false))
@@ -42,17 +42,24 @@ export default function DepartementStatsView() {
 
       {!loading && stats.length > 0 && (
         <div className="dept-stats-layout">
-          <DepartementMap stats={stats} selected={selected} onSelect={setSelected} />
+          <FranceMap
+            villeStats={stats}
+            activite={activite}
+            selectedVille={selected}
+            onSelectVille={setSelected}
+            lists={lists}
+            onListsChange={onListsChange}
+          />
 
           <div className="dept-stats-list">
-            {stats.map((d) => (
+            {stats.map((v) => (
               <div
-                key={d.code}
-                className={`dept-stats-row${selected === d.code ? ' active' : ''}`}
-                onClick={() => setSelected(d.code)}
+                key={v.name}
+                className={`dept-stats-row${selected === v.name ? ' active' : ''}`}
+                onClick={() => setSelected(v.name)}
               >
-                <span className="dept-stats-name">{d.code} — {d.name}</span>
-                <span className="dept-stats-count">🔥 {d.chauds}</span>
+                <span className="dept-stats-name">{v.name}</span>
+                <span className="dept-stats-count">🔥 {v.chauds}</span>
               </div>
             ))}
           </div>

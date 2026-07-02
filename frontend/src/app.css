@@ -1624,3 +1624,63 @@ main { flex: 1; }
   .dept-map { height: 380px; }
   .dept-stats-list { max-height: 280px; flex: none; }
 }
+
+/* ── Bulles ville / cluster (carte France, drill-down) ───────────────────── */
+
+.city-bubble-wrap { background: transparent; border: none; }
+.city-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 800;
+  font-size: 0.8rem;
+  border: 2px solid rgba(255, 255, 255, 0.55);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+.city-cluster-bubble { font-size: 0.85rem; }
+
+.map-back-btn {
+  position: absolute;
+  top: 0.6rem;
+  left: 0.6rem;
+  z-index: 500;
+  padding: 0.4rem 0.85rem;
+  border-radius: 99px;
+  border: 1px solid var(--surface2);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+}
+.map-back-btn:hover { background: var(--surface3); }
+
+/* Popup Leaflet — surcharge du thème clair par défaut pour matcher le thème sombre */
+.leaflet-popup-content-wrapper {
+  background: var(--surface);
+  color: var(--text);
+  border-radius: var(--radius-sm);
+}
+.leaflet-popup-tip { background: var(--surface); }
+.leaflet-popup-content { margin: 0.75rem 0.85rem; }
+.leaflet-popup-close-button { color: var(--muted) !important; }
+
+.map-popup { display: flex; flex-direction: column; gap: 0.4rem; min-width: 200px; }
+.map-popup-header { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.map-popup-name { font-weight: 700; font-size: 0.95rem; }
+.map-popup-address { font-size: 0.78rem; color: var(--muted); }
+.map-popup-row { font-size: 0.85rem; }
+.map-popup-link { color: var(--accent2); text-decoration: none; }
+.map-popup-link:hover { text-decoration: underline; }
+.map-popup-muted { color: var(--muted); font-size: 0.8rem; }
+.gmaps-badge.gmaps-nosite { background: rgba(239, 68, 68, 0.18); color: #fca5a5; }
+.map-popup-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: 0.2rem;
+}

@@ -323,6 +323,38 @@ async def stats_departements(activite: Optional[str] = Query(None)) -> list[dict
     return out
 
 
+@app.get("/api/stats/villes")
+async def stats_villes(activite: Optional[str] = Query(None)) -> list[dict]:
+    """Concentration de leads chauds par ville (niveau 1 du drill-down carte).
+    Sans `activite`, agrège tous les business_type confondus."""
+    business_types: Optional[list[str]] = None
+    if activite:
+        cat = load_categories().get(activite)
+        business_types = cat["types"] if cat else []
+    rows = await store.stats_by_ville(business_types=business_types)
+    rows.sort(key=lambda r: r["chauds"], reverse=True)
+    return rows
+
+
+@app.get("/api/leads/geo")
+async def leads_geo(
+    south: float = Query(...), west: float = Query(...),
+    north: float = Query(...), east: float = Query(...),
+    activite: Optional[str] = Query(None),
+    limit: int = Query(300, le=500),
+) -> list[dict]:
+    """Leads chauds précis dans un viewport carte (niveau 2 du drill-down),
+    bornés au rectangle visible pour ne jamais charger tous les leads de France."""
+    business_types: Optional[list[str]] = None
+    if activite:
+        cat = load_categories().get(activite)
+        business_types = cat["types"] if cat else []
+    return await store.get_leads_in_bounds(
+        south=south, west=west, north=north, east=east,
+        business_types=business_types, limit=limit,
+    )
+
+
 @app.get("/api/health")
 async def health() -> dict:
     return {"status": "ok", "version": "0.1.0"}

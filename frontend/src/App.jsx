@@ -213,7 +213,7 @@ export default function App() {
       )}
 
       {tab === 'carte' && (
-        <DepartementStatsView />
+        <DepartementStatsView lists={lists} onListsChange={setLists} />
       )}
 
       {categoryEditorOpen && (

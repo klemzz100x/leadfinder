@@ -241,6 +241,56 @@ class LeadStore:
         )
         return [r["departement"] for r in rows]
 
+    async def stats_by_ville(self, business_types: Optional[list[str]] = None) -> list[dict[str, Any]]:
+        """Nombre de leads chauds (et total actif) par ville, agrégé côté serveur.
+
+        Remplace le découpage par département pour l'affichage carte (Phase 5) :
+        s'appuie directement sur `city`/`lat`/`lng` de chaque lead scanné, donc
+        toute ville scannée apparaît automatiquement, sans dépendre du mapping
+        département. Mêmes exclusions que `stats_by_departement` (pipeline actif,
+        villes sans lead chaud)."""
+        rows = await self.pool.fetch(
+            f"""
+            SELECT city AS name,
+                   AVG(lat) AS lat, AVG(lng) AS lng,
+                   COUNT(*) FILTER (WHERE temperature = 'chaud') AS chauds,
+                   COUNT(*) AS total
+            FROM leads
+            WHERE {_ACTIVE_PIPELINE_WHERE}
+              AND ($1::text[] IS NULL OR business_type = ANY($1))
+            GROUP BY city
+            HAVING COUNT(*) FILTER (WHERE temperature = 'chaud') > 0
+            """,
+            business_types,
+        )
+        return [dict(r) for r in rows]
+
+    async def get_leads_in_bounds(
+        self,
+        south: float, west: float, north: float, east: float,
+        business_types: Optional[list[str]] = None,
+        limit: int = 300,
+    ) -> list[dict[str, Any]]:
+        """Leads chauds précis dans un viewport carte (Phase 5, niveau 2 du drill-down).
+
+        Toujours borné au rectangle visible + LIMIT : jamais tous les leads de
+        France chargés en mémoire, uniquement ce qui est affiché à l'écran."""
+        rows = await self.pool.fetch(
+            f"""
+            SELECT id, name, address, phone, website, web_status, business_type,
+                   score, temperature, gmaps_status, gmaps_website, gmaps_url,
+                   city, lat, lng
+            FROM leads
+            WHERE temperature = 'chaud' AND {_ACTIVE_PIPELINE_WHERE}
+              AND lat BETWEEN $1 AND $2 AND lng BETWEEN $3 AND $4
+              AND ($5::text[] IS NULL OR business_type = ANY($5))
+            ORDER BY score DESC
+            LIMIT $6
+            """,
+            south, north, west, east, business_types, limit,
+        )
+        return [dict(r) for r in rows]
+
     async def stats_by_departement(self, business_types: Optional[list[str]] = None) -> list[dict[str, Any]]:
         """Nombre de leads chauds (et total actif) par département, agrégé côté
         serveur pour rester correct au-delà du scan courant en mémoire. Exclut

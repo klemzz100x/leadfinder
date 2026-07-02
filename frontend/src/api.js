@@ -128,6 +128,27 @@ export async function fetchDeptStats(activite) {
   return res.json()
 }
 
+export async function fetchVilleStats(activite) {
+  const p = new URLSearchParams()
+  if (activite) p.set('activite', activite)
+  const res = await fetch(`${BASE}/stats/villes?${p}`)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
+export async function fetchLeadsInBounds({ activite, bounds, limit = 300 } = {}) {
+  const p = new URLSearchParams()
+  if (activite) p.set('activite', activite)
+  p.set('south', bounds.south)
+  p.set('west', bounds.west)
+  p.set('north', bounds.north)
+  p.set('east', bounds.east)
+  p.set('limit', limit)
+  const res = await fetch(`${BASE}/leads/geo?${p}`)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
 export async function fetchDashboard(month) {
   const p = new URLSearchParams()
   if (month) p.set('month', month)
