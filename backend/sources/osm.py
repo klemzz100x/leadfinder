@@ -239,15 +239,21 @@ class OSMSource(BusinessSource):
     async def _fetch_bbox_recursive(
         self, bbox: tuple[float, float, float, float], depth: int, max_depth: int = 3
     ) -> list[dict[str, Any]]:
-        """Récupère les éléments d'une bbox ; découpe en 4 uniquement si la réponse est tronquée (trop volumineuse)."""
+        """Récupère les éléments d'une bbox ; découpe en 4 sous-cellules si la
+        réponse est tronquée (trop volumineuse) OU si Overpass échoue/timeout
+        sur cette zone — une bbox de département entier est un cas classique
+        de requête trop lourde pour passer en un seul appel (confirmé en
+        conditions réelles : 504 Gateway Timeout sur une zone de la taille de
+        l'Ain). Une bbox 4x plus petite est une requête plus légère, donc plus
+        susceptible de passer même si le serveur est chargé."""
         query = _overpass_query(bbox)
         resp = await self._overpass_call(query)
 
         if resp is None:
-            # Échec sur toutes les instances Overpass (serveur indisponible/surchargé) :
-            # subdiviser ne ferait que multiplier des appels voués à échouer. On abandonne
-            # cette branche plutôt que de faire exploser le temps total du scan.
-            log.warning("Overpass indisponible sur bbox %s -> abandon de cette zone", bbox)
+            if depth < max_depth:
+                log.warning("Overpass KO sur bbox %s (depth=%d) -> subdivision", bbox, depth)
+                return await self._split_and_fetch(bbox, depth, max_depth)
+            log.warning("Overpass KO sur bbox %s -> abandon (profondeur max atteinte)", bbox)
             return []
 
         elements = resp.get("elements", [])
