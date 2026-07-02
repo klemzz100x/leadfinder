@@ -16,12 +16,12 @@ from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from .audit import audit_url
 from .categories import load_categories, save_categories
 from .departements import DEPARTEMENT_CENTROIDS, DEPARTEMENTS
-from .pipeline import ScanSummary, scan_city
+from .pipeline import ScanSummary, scan_city, scan_departement
 from .sources.osm import USER_AGENT
 from .store import LeadStore
 
@@ -59,7 +59,14 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s %(name)s: %(messag
 # ── Modèles de requête ─────────────────────────────────────────────────────────
 
 class ScanRequest(BaseModel):
-    city: str
+    city: Optional[str] = None
+    departements: Optional[list[str]] = None
+
+    @model_validator(mode="after")
+    def _at_least_one(self) -> "ScanRequest":
+        if not (self.city and self.city.strip()) and not self.departements:
+            raise ValueError("Renseignez une ville ou au moins un département")
+        return self
 
 
 class PatchLeadRequest(BaseModel):
@@ -96,13 +103,27 @@ class PatchListLeadRequest(BaseModel):
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
 
-@app.post("/api/scan", response_model=ScanSummary)
-async def scan(req: ScanRequest) -> ScanSummary:
-    """Lance la découverte des business pour une ville et renvoie le résumé."""
-    city = req.city.strip()
-    if not city:
-        raise HTTPException(400, "Paramètre 'city' vide")
-    return await scan_city(city, store, http_client=_http)
+@app.post("/api/scan")
+async def scan(req: ScanRequest) -> list[ScanSummary]:
+    """Lance la découverte des business pour une ville, ou pour un ou plusieurs
+    départements entiers, et renvoie un résumé par zone scannée.
+
+    Si `city` est renseignée, elle prime (comportement historique inchangé) —
+    les départements éventuellement sélectionnés ne servent alors qu'à filtrer
+    l'affichage ensuite, pas à élargir le scan. Sans ville, chaque département
+    de `departements` est scanné en entier (toutes ses communes, pas que son
+    chef-lieu), séquentiellement."""
+    city = (req.city or "").strip()
+    if city:
+        return [await scan_city(city, store, http_client=_http)]
+
+    summaries: list[ScanSummary] = []
+    for code in req.departements or []:
+        try:
+            summaries.append(await scan_departement(code, store, http_client=_http))
+        except Exception as exc:
+            log.error("Scan département %r KO : %s", code, exc)
+    return summaries
 
 
 @app.get("/api/leads")
@@ -331,14 +352,20 @@ async def stats_departements(activite: Optional[str] = Query(None)) -> list[dict
 
 
 @app.get("/api/stats/villes")
-async def stats_villes(activite: Optional[str] = Query(None)) -> list[dict]:
+async def stats_villes(
+    activite: Optional[str] = Query(None),
+    departements: Optional[list[str]] = Query(None),
+) -> list[dict]:
     """Concentration de leads chauds par ville (niveau 1 du drill-down carte).
-    Sans `activite`, agrège tous les business_type confondus."""
+    Sans `activite`, agrège tous les business_type confondus. `departements`
+    restreint l'affichage à une sélection de départements, indépendamment de
+    l'historique des recherches par ville (un scan département alimente les
+    mêmes données, cf. /api/scan)."""
     business_types: Optional[list[str]] = None
     if activite:
         cat = load_categories().get(activite)
         business_types = cat["types"] if cat else []
-    rows = await store.stats_by_ville(business_types=business_types)
+    rows = await store.stats_by_ville(business_types=business_types, departement_codes=departements)
     rows.sort(key=lambda r: r["chauds"], reverse=True)
     return rows
 

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { suggestCities } from '../api.js'
 
-export default function SearchBar({ city, onChange, onScan, scanning }) {
+export default function SearchBar({ city, onChange, onScan, scanning, canScan = true }) {
   const [suggestions, setSuggestions] = useState([])
   const [open, setOpen] = useState(false)
   const [activeIdx, setActiveIdx] = useState(-1)
@@ -107,7 +107,8 @@ export default function SearchBar({ city, onChange, onScan, scanning }) {
       <button
         className="btn btn-scan"
         onClick={onScan}
-        disabled={scanning || !city.trim()}
+        disabled={scanning || !canScan}
+        title={canScan ? undefined : 'Tapez une ville ou sélectionnez au moins un département'}
       >
         {scanning ? 'Scan en cours…' : 'Scanner'}
       </button>

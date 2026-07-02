@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react'
 import {
-  scanCity, fetchLeads, fetchMeta, fetchDepartements, exportCsvUrl,
+  scanArea, fetchLeads, fetchMeta, fetchDepartements, exportCsvUrl,
   fetchCategories, fetchLists,
 } from './api.js'
+import { mergeScanSummaries } from './utils.js'
 import SearchBar from './components/SearchBar.jsx'
 import StatsBar from './components/StatsBar.jsx'
 import FilterBar from './components/FilterBar.jsx'
@@ -49,16 +50,28 @@ export default function App() {
     setTypes(meta.types || [])
   }, [filter])
 
+  // La ville prime si elle est renseignée (comportement historique inchangé) ;
+  // sans ville, on scanne le(s) département(s) sélectionné(s) en entier.
+  const canScan = city.trim().length > 0 || filter.departements.length > 0
+
   const handleScan = async () => {
     const trimmed = city.trim()
-    if (!trimmed) return
+    if (!canScan) return
     setError('')
     setScanning(true)
     setSummary(null)
     setLeads([])
     try {
-      const s = await scanCity(trimmed)
-      setSummary(s)
+      const summaries = await scanArea({
+        city: trimmed || undefined,
+        departements: trimmed ? undefined : filter.departements,
+      })
+      const merged = mergeScanSummaries(summaries)
+      if (!merged) {
+        setError('Le scan n\'a ramené aucun résultat exploitable.')
+      } else {
+        setSummary(merged)
+      }
       await loadLeads(trimmed, filter)
     } catch (e) {
       setError(e.message)
@@ -144,6 +157,7 @@ export default function App() {
             onChange={setCity}
             onScan={handleScan}
             scanning={scanning}
+            canScan={canScan}
           />
         )}
         {error && <p className="error">{error}</p>}

@@ -172,9 +172,17 @@ class OSMSource(BusinessSource):
         if self._owns_client:
             await self._client.aclose()
 
-    # -- Étape 1 : ville -> zone -------------------------------------------
-    async def _resolve_city(self, city: str) -> Optional[tuple[float, float, float, float]]:
-        """Renvoie la bbox (south, west, north, east) de la ville, ou None."""
+    # -- Étape 1 : requête -> zone -------------------------------------------
+    async def _resolve_city(
+        self, query: str, featuretype: Optional[str] = "city"
+    ) -> Optional[tuple[float, float, float, float]]:
+        """Renvoie la bbox (south, west, north, east) résolue par Nominatim, ou None.
+
+        `featuretype="city"` restreint aux villes (recherche par ville, comportement
+        historique). `featuretype=None` laisse Nominatim résoudre librement — utilisé
+        pour un département, où le meilleur résultat est la limite administrative
+        entière (vérifié : `"Gironde, France"` résout bien vers un `boundingbox`
+        couvrant tout le département, pas seulement son chef-lieu)."""
         async with self._nominatim_lock:
             # respecter 1 req/s
             now = asyncio.get_event_loop().time()
@@ -182,12 +190,13 @@ class OSMSource(BusinessSource):
             if wait > 0:
                 await asyncio.sleep(wait)
             params = {
-                "q": city,
+                "q": query,
                 "format": "jsonv2",
                 "limit": 1,
-                "featuretype": "city",
                 "addressdetails": 0,
             }
+            if featuretype:
+                params["featuretype"] = featuretype
             self._calls += 1
             resp = await self._request_with_retry("GET", NOMINATIM_URL, params=params)
             self._last_nominatim = asyncio.get_event_loop().time()
@@ -195,18 +204,18 @@ class OSMSource(BusinessSource):
             return None
         data = resp.json()
         if not data:
-            log.warning("Nominatim n'a pas résolu la ville: %r", city)
+            log.warning("Nominatim n'a pas résolu: %r", query)
             return None
         bb = data[0].get("boundingbox")  # [south, north, west, east] (strings)
         if not bb or len(bb) != 4:
             return None
         south, north, west, east = (float(x) for x in bb)
-        log.info("Ville %r -> bbox S=%.4f W=%.4f N=%.4f E=%.4f", city, south, west, north, east)
+        log.info("%r -> bbox S=%.4f W=%.4f N=%.4f E=%.4f", query, south, west, north, east)
         return (south, west, north, east)
 
     # -- Étape 2 : zone -> business ----------------------------------------
-    async def discover(self, city: str) -> list[RawBusiness]:
-        bbox = await self._resolve_city(city)
+    async def discover(self, city: str, featuretype: Optional[str] = "city") -> list[RawBusiness]:
+        bbox = await self._resolve_city(city, featuretype=featuretype)
         if bbox is None:
             return []
 
@@ -215,14 +224,14 @@ class OSMSource(BusinessSource):
         # Dédoublonnage par id stable osm_type:osm_id.
         seen: dict[str, RawBusiness] = {}
         for el in elements:
-            biz = self._element_to_business(el, city)
+            biz = self._element_to_business(el)
             if biz is None:
                 continue
             seen.setdefault(biz.id, biz)
 
         results = list(seen.values())
         log.info(
-            "Ville %r : %d business uniques (%d éléments bruts, %d appels réseau)",
+            "%r : %d business uniques (%d éléments bruts, %d appels réseau)",
             city, len(results), len(elements), self._calls,
         )
         return results
@@ -267,7 +276,7 @@ class OSMSource(BusinessSource):
             out.extend(await self._fetch_bbox_recursive(q, depth + 1, max_depth))
         return out
 
-    def _element_to_business(self, el: dict[str, Any], city: str) -> Optional[RawBusiness]:
+    def _element_to_business(self, el: dict[str, Any]) -> Optional[RawBusiness]:
         tags: dict[str, str] = el.get("tags") or {}
         if not _is_lucrative(tags):
             return None
@@ -305,6 +314,7 @@ class OSMSource(BusinessSource):
             website=website,
             address=_build_address(tags),
             postcode=tags.get("addr:postcode"),
+            city=tags.get("addr:city"),
             opening_hours=tags.get("opening_hours"),
             raw_tags=tags,
         )

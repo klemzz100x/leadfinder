@@ -33,6 +33,7 @@ class RawBusiness:
     website: Optional[str] = None
     address: Optional[str] = None
     postcode: Optional[str] = None
+    city: Optional[str] = None
     opening_hours: Optional[str] = None
     raw_tags: dict[str, str] = field(default_factory=dict)  # tags bruts, pour debug/audit
 

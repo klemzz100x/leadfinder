@@ -1572,6 +1572,13 @@ main { flex: 1; }
 
 .dept-stats-view { padding: 1rem 1.25rem; display: flex; flex-direction: column; gap: 1rem; }
 
+.dept-stats-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
 .dept-stats-toolbar select {
   padding: 0.45rem 0.8rem;
   border-radius: var(--radius-sm);
@@ -1579,6 +1586,17 @@ main { flex: 1; }
   background: var(--bg);
   color: var(--text);
   font-size: 0.88rem;
+}
+
+.dept-stats-empty {
+  padding: 3rem 1rem;
+  color: var(--muted);
+  text-align: center;
+  font-size: 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
 }
 
 .dept-stats-layout {

@@ -235,27 +235,34 @@ class LeadStore:
         rows = await self.pool.fetch(sql, *values)
         return [dict(r) for r in rows]
 
-    async def stats_by_ville(self, business_types: Optional[list[str]] = None) -> list[dict[str, Any]]:
+    async def stats_by_ville(
+        self,
+        business_types: Optional[list[str]] = None,
+        departement_codes: Optional[list[str]] = None,
+    ) -> list[dict[str, Any]]:
         """Nombre de leads chauds (et total actif) par ville, agrégé côté serveur.
 
-        Remplace le découpage par département pour l'affichage carte (Phase 5) :
-        s'appuie directement sur `city`/`lat`/`lng` de chaque lead scanné, donc
-        toute ville scannée apparaît automatiquement, sans dépendre du mapping
-        département. Mêmes exclusions que `stats_by_departement` (pipeline actif,
-        villes sans lead chaud)."""
+        S'appuie directement sur `city`/`lat`/`lng` de chaque lead scanné (peu
+        importe si le scan a été lancé par ville ou par département) : toute
+        ville scannée apparaît automatiquement. `departement_codes` permet de
+        restreindre l'affichage carte à une sélection de départements, sans
+        dépendre de l'historique des recherches par ville. Mêmes exclusions
+        que le pipeline actif (déjà équipés / fermés définitivement, villes
+        sans lead chaud)."""
         rows = await self.pool.fetch(
             f"""
-            SELECT city AS name,
+            SELECT city AS name, departement,
                    AVG(lat) AS lat, AVG(lng) AS lng,
                    COUNT(*) FILTER (WHERE temperature = 'chaud') AS chauds,
                    COUNT(*) AS total
             FROM leads
             WHERE {_ACTIVE_PIPELINE_WHERE}
               AND ($1::text[] IS NULL OR business_type = ANY($1))
-            GROUP BY city
+              AND ($2::text[] IS NULL OR departement = ANY($2))
+            GROUP BY city, departement
             HAVING COUNT(*) FILTER (WHERE temperature = 'chaud') > 0
             """,
-            business_types,
+            business_types, departement_codes,
         )
         return [dict(r) for r in rows]
 
@@ -307,19 +314,24 @@ class LeadStore:
 
     # ── Vérification Google Places ─────────────────────────────────────────────
 
-    async def get_leads_needing_gmaps_check(self, city: str, limit: int = 50) -> list[dict[str, Any]]:
-        """Leads sans site OSM, jamais vérifiés côté Google ou vérifiés il y a >30j."""
+    async def get_leads_needing_gmaps_check(self, cities: list[str], limit: int = 50) -> list[dict[str, Any]]:
+        """Leads sans site OSM, jamais vérifiés côté Google ou vérifiés il y a >30j,
+        parmi les villes données (une seule pour un scan ville, potentiellement
+        plusieurs pour un scan département — `limit` reste un plafond global,
+        pas par ville)."""
+        if not cities:
+            return []
         cutoff = (datetime.now(timezone.utc) - timedelta(days=30)).isoformat()
         rows = await self.pool.fetch(
             """
             SELECT id, name, address, city, business_type, web_status FROM leads
-            WHERE LOWER(city) = LOWER($1)
+            WHERE city = ANY($1)
               AND website IS NULL
               AND (gmaps_checked_at IS NULL OR gmaps_checked_at < $2)
             ORDER BY score DESC
             LIMIT $3
             """,
-            city, cutoff, limit,
+            cities, cutoff, limit,
         )
         return [dict(r) for r in rows]
 
