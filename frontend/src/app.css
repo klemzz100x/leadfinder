@@ -873,7 +873,12 @@ main { flex: 1; }
   border-radius: var(--radius-sm);
   padding: 3px;
   border: 1px solid rgba(255,255,255,0.06);
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.main-tabs::-webkit-scrollbar { display: none; }
 
 .main-tab {
   display: inline-flex;
@@ -889,6 +894,7 @@ main { flex: 1; }
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
   position: relative;
+  flex-shrink: 0;
 }
 .main-tab:hover { color: var(--text); background: rgba(255,255,255,0.05); }
 .main-tab.active { background: rgba(59,130,246,0.18); color: var(--accent2); }
@@ -1246,7 +1252,7 @@ main { flex: 1; }
 /* ── List lead row ── */
 .llr-row {
   display: grid;
-  grid-template-columns: 1fr auto auto auto;
+  grid-template-columns: 1fr auto auto auto auto;
   align-items: center;
   gap: 0.75rem;
   padding: 0.65rem 1rem;
@@ -1387,7 +1393,25 @@ main { flex: 1; }
 /* ── Responsive mobile ── */
 @media (max-width: 640px) {
   .app-header { padding: 1rem; }
+  .header-top { gap: 0.6rem; }
+  .header-title { font-size: 1.2rem; }
+  .main-tab { padding: 0.4rem 0.7rem; font-size: 0.82rem; }
+
+  .search-bar { flex-wrap: wrap; }
+  .search-input-wrap { flex-basis: 100%; }
+  .btn-scan { flex: 1; justify-content: center; }
+
   .toolbar { padding: 0.5rem 0.75rem; }
+  .filter-bar { width: 100%; }
+  .filter-bar select,
+  .dept-filter-btn,
+  .list-status-filter,
+  .dept-stats-toolbar select { min-height: 2.5rem; }
+
+  .dept-filter { width: 100%; }
+  .dept-filter-btn { width: 100%; text-align: left; }
+  .dept-filter-panel { left: 0; right: 0; width: auto; }
+
   .lead-list { padding: 0.5rem 0.5rem; }
 
   .lead-card {
@@ -1399,15 +1423,86 @@ main { flex: 1; }
   .lead-card-badge { grid-column: 1; grid-row: 1; }
   .lead-card-main  { grid-column: 1; grid-row: 2; }
   .lead-card-top-right { grid-column: 1; grid-row: 1; justify-content: flex-start; margin-top: -1.6rem; margin-left: 5rem; }
-  .lead-card-score-col { grid-column: 1; grid-row: 3; }
-  .lead-card-actions-col { grid-column: 1; grid-row: 4; justify-content: flex-start; }
+  .lead-card-score-col {
+    grid-column: 1;
+    grid-row: 3;
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+  .lead-card-score-col .score-section { flex-basis: 100%; }
+  .lead-card-actions-col {
+    grid-column: 1;
+    grid-row: 4;
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    row-gap: 0.4rem;
+  }
 
   .score-track { max-width: none; }
   .btn-call { padding: 0.4rem 1rem; font-size: 0.88rem; }
+  .btn-notes, .llr-btn-remove {
+    min-width: 2.25rem;
+    min-height: 2.25rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
 
   .stats-bar { padding: 0.6rem 0.75rem; }
   .view-toggle { flex-wrap: wrap; }
-  .modal-panel { max-height: 90vh; }
+
+  /* ── Modal ── */
+  .modal-overlay { padding: 0.5rem; }
+  .modal-panel { max-height: 92vh; }
+  .modal-footer { flex-wrap: wrap; }
+  .modal-footer .btn { flex: 1; justify-content: center; }
+  .cat-editor-budget input { width: 100%; }
+  .cat-editor-budget label { flex: 1 1 7rem; }
+
+  /* ── List lead row (Mes Listes) ── */
+  .llr-row {
+    grid-template-columns: 1fr;
+    row-gap: 0.5rem;
+    padding: 0.75rem 0.85rem;
+  }
+  .llr-phone,
+  .llr-budget-col,
+  .llr-status-col,
+  .llr-actions {
+    justify-content: flex-start;
+    width: 100%;
+  }
+  .status-select { width: 100%; min-height: 2.5rem; }
+  .llr-budget-input { flex: 1; width: auto; }
+
+  /* ── Dashboard ── */
+  .dashboard-toolbar { flex-wrap: wrap; }
+  .dashboard-toolbar .btn { flex: 1; justify-content: center; }
+
+  /* ── Carte départements ── */
+  .dept-stats-toolbar select { width: 100%; }
+}
+
+/* ── Mes Listes : sidebar + contenu empilés sous 720px ── */
+@media (max-width: 720px) {
+  .lists-view {
+    flex-direction: column;
+    height: auto;
+  }
+  .lists-sidebar {
+    width: 100%;
+    max-height: 220px;
+    border-right: none;
+    border-bottom: 1px solid var(--surface2);
+  }
+  .lists-main { overflow: visible; }
+  .list-leads-container { overflow: visible; }
+}
+
+/* ── Très petits écrans ── */
+@media (max-width: 400px) {
+  .dashboard-kpi-value { font-size: 1.35rem; }
+  .dept-map { height: 320px; }
 }
 
 /* ── Dashboard ─────────────────────────────────────────────────────────── */
