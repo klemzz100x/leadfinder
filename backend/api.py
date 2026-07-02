@@ -91,6 +91,10 @@ class CreateListRequest(BaseModel):
     name: str
 
 
+class RenameListRequest(BaseModel):
+    name: str
+
+
 class AddLeadsRequest(BaseModel):
     lead_ids: list[str]
 
@@ -316,6 +320,16 @@ async def create_list(req: CreateListRequest) -> dict:
     return await store.create_list(name)
 
 
+@app.patch("/api/lists/{list_id}")
+async def rename_list(list_id: str, req: RenameListRequest) -> dict:
+    name = req.name.strip()
+    if not name:
+        raise HTTPException(400, "Nom de liste vide")
+    if not await store.rename_list(list_id, name):
+        raise HTTPException(404, f"Liste {list_id!r} introuvable")
+    return {"ok": True, "name": name}
+
+
 @app.delete("/api/lists/{list_id}")
 async def delete_list(list_id: str) -> dict:
     if not await store.delete_list(list_id):
@@ -445,6 +459,20 @@ async def leads_geo(
         south=south, west=west, north=north, east=east,
         business_types=business_types, limit=limit,
     )
+
+
+# Enregistré après toutes les routes GET /api/leads/... plus spécifiques
+# (meta, geo) : {lead_id:path} est un attrape-tout qui, placé avant, les
+# aurait masquées (FastAPI matche dans l'ordre d'enregistrement).
+@app.get("/api/leads/{lead_id:path}")
+async def get_lead(lead_id: str) -> dict:
+    """Détail d'un lead par id — sert notamment au générateur de sites vitrine
+    (site-web/generate.mjs --lead-id) pour préremplir nom/adresse/téléphone/
+    lien Maps depuis un lead déjà closé, sans ressaisie manuelle."""
+    lead = await store.get_lead(lead_id)
+    if not lead:
+        raise HTTPException(404, f"Lead {lead_id!r} introuvable")
+    return lead
 
 
 @app.get("/api/health")

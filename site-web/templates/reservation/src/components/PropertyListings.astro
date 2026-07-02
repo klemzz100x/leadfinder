@@ -1,0 +1,35 @@
+---
+// Section "biens en vente/location" — pertinente pour une agence immobilière,
+// désactivée par défaut ailleurs (site.config.json: biensImmobiliers.active).
+import siteConfig from '../data/site.config.json';
+import ImagePlaceholder from './ImagePlaceholder.astro';
+
+const { biensImmobiliers } = siteConfig;
+---
+
+{biensImmobiliers?.active && (
+  <section id="biens" class="py-20 bg-stone-100">
+    <div class="max-w-6xl mx-auto px-6">
+      <div class="text-center mb-12">
+        <span class="text-rose-600 font-semibold uppercase tracking-widest text-sm">Nos biens</span>
+        <h2 class="mt-3 text-3xl sm:text-4xl font-serif font-semibold text-stone-900">En vente / à louer</h2>
+      </div>
+      <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        {biensImmobiliers.biens.map((bien) => (
+          <div class="bg-white rounded-xl shadow-sm border border-stone-200 overflow-hidden">
+            {bien.photo ? (
+              <img src={bien.photo} alt={bien.titre} class="w-full h-48 object-cover" />
+            ) : (
+              <ImagePlaceholder label="Photo du bien à remplacer" class="w-full h-48" />
+            )}
+            <div class="p-5">
+              <p class="font-serif text-xl text-rose-600 font-semibold">{bien.prix}</p>
+              <p class="mt-1 font-medium text-stone-900">{bien.titre}</p>
+              <p class="mt-2 text-sm text-stone-600">{bien.description}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  </section>
+)}

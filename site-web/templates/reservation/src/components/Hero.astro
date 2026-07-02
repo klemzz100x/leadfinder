@@ -1,0 +1,40 @@
+---
+import siteConfig from '../data/site.config.json';
+import ImagePlaceholder from './ImagePlaceholder.astro';
+---
+
+<section class="relative h-[85vh] min-h-[520px] flex items-end overflow-hidden">
+  {siteConfig.heroImage ? (
+    <img
+      src={siteConfig.heroImage}
+      alt={siteConfig.nom}
+      class="absolute inset-0 w-full h-full object-cover"
+    />
+  ) : (
+    <ImagePlaceholder label="Image de fond à remplacer" class="absolute inset-0 w-full h-full" />
+  )}
+  <div class="absolute inset-0 bg-gradient-to-t from-stone-900/85 via-stone-900/40 to-stone-900/10"></div>
+
+  <div class="relative z-10 w-full max-w-5xl mx-auto px-6 pb-16 text-white">
+    <h1 class="text-4xl sm:text-6xl font-serif font-semibold tracking-tight drop-shadow-sm">
+      {siteConfig.nom}
+    </h1>
+    <p class="mt-4 text-lg sm:text-2xl font-light max-w-2xl text-stone-100">
+      {siteConfig.accroche}
+    </p>
+    <div class="mt-8 flex flex-wrap gap-4">
+      <a
+        href={`tel:${siteConfig.telephone}`}
+        class="inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 transition-colors text-white font-semibold px-6 py-3 rounded-full shadow-lg"
+      >
+        📞 Appeler maintenant
+      </a>
+      <a
+        href="#prestations"
+        class="inline-flex items-center gap-2 bg-white/10 hover:bg-white/20 backdrop-blur transition-colors text-white font-semibold px-6 py-3 rounded-full border border-white/30"
+      >
+        Voir nos prestations
+      </a>
+    </div>
+  </div>
+</section>

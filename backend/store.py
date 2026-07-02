@@ -518,6 +518,13 @@ class LeadStore:
         )
         return {"id": list_id, "name": name, "created_at": now, "updated_at": now, "lead_count": 0}
 
+    async def rename_list(self, list_id: str, name: str) -> bool:
+        now = datetime.now(timezone.utc).isoformat()
+        status = await self.pool.execute(
+            "UPDATE prospect_lists SET name = $1, updated_at = $2 WHERE id = $3", name, now, list_id
+        )
+        return _affected(status) > 0
+
     async def get_lists(self) -> list[dict[str, Any]]:
         rows = await self.pool.fetch("""
             SELECT pl.id, pl.name, pl.created_at, pl.updated_at,

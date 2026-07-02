@@ -1,0 +1,71 @@
+{
+  "nom": "Nom de l'établissement — à remplacer",
+  "accroche": "Votre accroche ici — une phrase qui donne envie de venir",
+  "description": "Description générique de l'établissement à remplacer par un texte présentant vraiment l'activité, l'ambiance et ce qui la distingue des autres.",
+  "adresse": "Adresse à remplacer, Ville",
+  "telephone": "0000000000",
+  "email": "contact@exemple.fr",
+  "googleMapsUrl": "https://www.google.com/maps/search/?api=1&query=Adresse+a+remplacer",
+  "siteWebActuel": null,
+  "heroImage": null,
+  "horaires": [
+    { "jour": "Lundi", "heures": "Fermé" },
+    { "jour": "Mardi", "heures": "09h00 – 19h00" },
+    { "jour": "Mercredi", "heures": "09h00 – 19h00" },
+    { "jour": "Jeudi", "heures": "09h00 – 19h00" },
+    { "jour": "Vendredi", "heures": "09h00 – 19h00" },
+    { "jour": "Samedi", "heures": "09h00 – 17h00" },
+    { "jour": "Dimanche", "heures": "Fermé" }
+  ],
+  "reseauxSociaux": {
+    "instagram": null,
+    "facebook": null,
+    "tiktok": null
+  },
+  "galerie": [
+    { "src": null, "alt": "Photo à remplacer 1" },
+    { "src": null, "alt": "Photo à remplacer 2" },
+    { "src": null, "alt": "Photo à remplacer 3" },
+    { "src": null, "alt": "Photo à remplacer 4" }
+  ],
+  "avis": [
+    { "nom": "Prénom N. — à remplacer", "note": 5, "texte": "Avis client type — à remplacer par un vrai avis." },
+    { "nom": "Prénom N. — à remplacer", "note": 5, "texte": "Avis client type — à remplacer par un vrai avis." },
+    { "nom": "Prénom N. — à remplacer", "note": 4, "texte": "Avis client type — à remplacer par un vrai avis." }
+  ],
+  "prestations": [
+    { "nom": "Prestation à remplacer 1", "prix": "XX €", "duree": "30 min" },
+    { "nom": "Prestation à remplacer 2", "prix": "XX €", "duree": "45 min" },
+    { "nom": "Prestation à remplacer 3", "prix": "XX €", "duree": "1h" },
+    { "nom": "Prestation à remplacer 4", "prix": "XX €", "duree": "1h30" }
+  ],
+  "reservation": {
+    "activee": true,
+    "calLink": "votre-compte-calcom/votre-evenement",
+    "titre": "Prenez rendez-vous en ligne",
+    "sousTitre": "Choisissez un créneau qui vous convient — confirmation immédiate."
+  },
+  "biensImmobiliers": {
+    "active": false,
+    "biens": [
+      {
+        "titre": "Bien à remplacer 1",
+        "prix": "XXX XXX €",
+        "description": "Description courte à remplacer — surface, pièces, particularités.",
+        "photo": null
+      },
+      {
+        "titre": "Bien à remplacer 2",
+        "prix": "XXX XXX €",
+        "description": "Description courte à remplacer — surface, pièces, particularités.",
+        "photo": null
+      },
+      {
+        "titre": "Bien à remplacer 3",
+        "prix": "XXX XXX €",
+        "description": "Description courte à remplacer — surface, pièces, particularités.",
+        "photo": null
+      }
+    ]
+  }
+}

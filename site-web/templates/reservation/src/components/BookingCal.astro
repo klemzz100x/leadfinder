@@ -1,0 +1,65 @@
+---
+// Réservation en ligne via Cal.com (embed vanilla JS — pas de dépendance
+// React nécessaire). Le calLink par défaut pointe vers un compte de
+// démonstration : à remplacer par le vrai lien Cal.com du client dans
+// site.config.json (reservation.calLink) avant mise en ligne.
+import siteConfig from '../data/site.config.json';
+
+const { reservation } = siteConfig;
+---
+
+{reservation?.activee && (
+  <section id="reservation" class="py-20 bg-white">
+    <div class="max-w-3xl mx-auto px-6">
+      <div class="text-center mb-10">
+        <span class="text-rose-600 font-semibold uppercase tracking-widest text-sm">Réservation</span>
+        <h2 class="mt-3 text-3xl sm:text-4xl font-serif font-semibold text-stone-900">{reservation.titre}</h2>
+        <p class="mt-3 text-stone-600">{reservation.sousTitre}</p>
+      </div>
+
+      <div id="cal-booking-placeholder" class="min-h-[600px] rounded-xl border border-stone-200 shadow-sm overflow-hidden"></div>
+    </div>
+
+    <script define:vars={{ calLink: reservation.calLink }} is:inline>
+      (function (C, A, L) {
+        let p = function (a, ar) { a.q.push(ar); };
+        let d = C.document;
+        C.Cal = C.Cal || function () {
+          let cal = C.Cal;
+          let ar = arguments;
+          if (!cal.loaded) {
+            cal.ns = {};
+            cal.q = cal.q || [];
+            d.head.appendChild(d.createElement('script')).src = A;
+            cal.loaded = true;
+          }
+          if (ar[0] === L) {
+            const api = function () { p(api, arguments); };
+            const namespace = ar[1];
+            api.q = api.q || [];
+            if (typeof namespace === 'string') {
+              cal.ns[namespace] = cal.ns[namespace] || api;
+              p(cal.ns[namespace], ar);
+              p(cal, ['initNamespace', namespace]);
+            } else p(cal, ar);
+            return;
+          }
+          p(cal, ar);
+        };
+      })(window, 'https://app.cal.com/embed/embed.js', 'init');
+
+      Cal('init', { origin: 'https://cal.com' });
+
+      Cal('inline', {
+        elementOrSelector: '#cal-booking-placeholder',
+        calLink: calLink,
+        config: { layout: 'month_view' },
+      });
+
+      Cal('ui', {
+        hideEventTypeDetails: false,
+        layout: 'month_view',
+      });
+    </script>
+  </section>
+)}

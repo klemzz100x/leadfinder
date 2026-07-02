@@ -1,0 +1,27 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Hero from '../components/Hero.astro';
+import About from '../components/About.astro';
+import Gallery from '../components/Gallery.astro';
+import Testimonials from '../components/Testimonials.astro';
+import PropertyListings from '../components/PropertyListings.astro';
+import Services from '../components/Services.astro';
+import BookingCal from '../components/BookingCal.astro';
+import ContactMap from '../components/ContactMap.astro';
+import siteConfig from '../data/site.config.json';
+---
+
+<BaseLayout>
+  <Hero />
+  <About />
+  <Gallery />
+  <Testimonials />
+  <PropertyListings />
+  <Services />
+  <BookingCal />
+  <ContactMap />
+
+  <footer class="bg-stone-900 text-stone-400 text-sm text-center py-6">
+    © {new Date().getFullYear()} {siteConfig.nom} — Tous droits réservés
+  </footer>
+</BaseLayout>

@@ -29,6 +29,13 @@ vite.log
 # Node
 frontend/node_modules/
 frontend/dist/
+node_modules/
+.astro/
+
+# Sites générés (livrables clients — pas du code source de l'outil lead gen,
+# chacun aura son propre repo/déploiement le moment venu)
+site-web/sites-generes/*
+!site-web/sites-generes/.gitkeep
 
 # OS
 .DS_Store

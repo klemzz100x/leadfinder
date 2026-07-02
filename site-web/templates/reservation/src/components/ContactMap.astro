@@ -1,0 +1,61 @@
+---
+import siteConfig from '../data/site.config.json';
+
+const mapEmbedUrl = `https://www.google.com/maps?q=${encodeURIComponent(siteConfig.adresse)}&output=embed`;
+const socials = Object.entries(siteConfig.reseauxSociaux).filter(([, url]) => url);
+---
+
+<section id="contact" class="py-20 bg-stone-100">
+  <div class="max-w-6xl mx-auto px-6 grid md:grid-cols-2 gap-10">
+    <div>
+      <span class="text-rose-600 font-semibold uppercase tracking-widest text-sm">Nous trouver</span>
+      <h2 class="mt-3 text-3xl sm:text-4xl font-serif font-semibold text-stone-900">Coordonnées & horaires</h2>
+
+      <div class="mt-6 space-y-3 text-stone-700">
+        <p>📍 <a href={siteConfig.googleMapsUrl} target="_blank" rel="noreferrer" class="hover:text-rose-600 underline underline-offset-2">{siteConfig.adresse}</a></p>
+        <p>📞 <a href={`tel:${siteConfig.telephone}`} class="hover:text-rose-600 font-semibold">{siteConfig.telephone}</a></p>
+        {siteConfig.email && <p>✉️ <a href={`mailto:${siteConfig.email}`} class="hover:text-rose-600">{siteConfig.email}</a></p>}
+      </div>
+
+      <table class="mt-6 w-full max-w-sm text-sm">
+        <tbody>
+          {siteConfig.horaires.map((h) => (
+            <tr class="border-b border-stone-200">
+              <td class="py-2 font-medium text-stone-900">{h.jour}</td>
+              <td class="py-2 text-right text-stone-600">{h.heures}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+
+      {socials.length > 0 && (
+        <div class="mt-6 flex gap-4">
+          {socials.map(([name, url]) => (
+            <a href={url as string} target="_blank" rel="noreferrer" class="text-stone-500 hover:text-rose-600 capitalize font-medium">
+              {name}
+            </a>
+          ))}
+        </div>
+      )}
+
+      <a
+        href={`tel:${siteConfig.telephone}`}
+        class="mt-8 inline-flex items-center gap-2 bg-rose-600 hover:bg-rose-700 transition-colors text-white font-semibold px-6 py-3 rounded-full shadow-lg"
+      >
+        📞 Appeler maintenant
+      </a>
+    </div>
+
+    <div class="rounded-xl overflow-hidden shadow-md border border-stone-200 min-h-[320px]">
+      <iframe
+        src={mapEmbedUrl}
+        width="100%"
+        height="100%"
+        style="border:0; min-height: 320px;"
+        loading="lazy"
+        referrerpolicy="no-referrer-when-downgrade"
+        title={`Localisation de ${siteConfig.nom}`}
+      ></iframe>
+    </div>
+  </div>
+</section>
