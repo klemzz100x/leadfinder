@@ -12,10 +12,27 @@ const STATUS_META = {
   facture_payee: { label: 'Facture payée',  color: '#10b981' },
 }
 
+// Prix forfaitaire d'un devis, pour un CA estimé nettement plus précis que
+// le potentiel "si 100% des leads chauds achetaient" (EstimatedRevenue) :
+// basé sur l'activité réelle de la liste (devis effectivement envoyés), pas
+// sur sa taille brute.
+const PRIX_DEVIS = 600
+
+// Un lead ayant atteint devis_envoye/devis_relance/closing/facture_payee a,
+// par définition, déjà reçu un devis à un moment du pipeline — même
+// ensemble que `_DEVIS_PLUS` côté backend (taux_devis).
+const STATUTS_DEVIS_ENVOYE = ['devis_envoye', 'devis_relance', 'closing', 'facture_payee']
+
+function fmtEuros(n) {
+  return `${n.toLocaleString('fr-FR')} €`
+}
+
 export default function ListStats({ stats }) {
   const { total, by_status, taux_contact, taux_devis, taux_closing, closings_par_jour } = stats
   const recent = closings_par_jour.slice(-14)
   const maxCount = Math.max(1, ...recent.map(d => d.count))
+  const devisEnvoyesCount = STATUTS_DEVIS_ENVOYE.reduce((sum, s) => sum + (by_status[s] || 0), 0)
+  const caEstimePrecis = devisEnvoyesCount * PRIX_DEVIS
 
   return (
     <div className="list-stats">
@@ -38,7 +55,18 @@ export default function ListStats({ stats }) {
         </div>
       </div>
 
-      <EstimatedRevenue count={total} />
+      <div className="list-stats-revenue-row">
+        <EstimatedRevenue count={total} label="potentiel total de la liste (si 100% achetaient)" />
+        {devisEnvoyesCount > 0 && (
+          <span
+            className="estimated-revenue estimated-revenue-precise"
+            title={`${devisEnvoyesCount} devis envoyé${devisEnvoyesCount > 1 ? 's' : ''} × ${PRIX_DEVIS} € (prix forfaitaire d'un devis)`}
+          >
+            💶 {fmtEuros(caEstimePrecis)}
+            <span className="estimated-revenue-label"> CA estimé sur devis envoyés ({devisEnvoyesCount} × {PRIX_DEVIS} €)</span>
+          </span>
+        )}
+      </div>
 
       <div className="list-stats-breakdown">
         {Object.entries(STATUS_META).map(([key, meta]) => {
