@@ -14,6 +14,7 @@ import CreneauxEditor from './components/CreneauxEditor.jsx'
 import ListsView from './components/ListsView.jsx'
 import RappelsView from './components/RappelsView.jsx'
 import Dashboard from './components/Dashboard.jsx'
+import PerformanceView from './components/PerformanceView.jsx'
 import DepartementStatsView from './components/DepartementStatsView.jsx'
 import DeptScanEstimate from './components/DeptScanEstimate.jsx'
 import BatchScanPanel from './components/BatchScanPanel.jsx'
@@ -217,6 +218,12 @@ export default function App() {
             >
               🗺️ Carte
             </button>
+            <button
+              className={`main-tab${tab === 'performance' ? ' active' : ''}`}
+              onClick={() => setTab('performance')}
+            >
+              ⚔️ Performance
+            </button>
           </nav>
           <IdentityPicker />
         </div>
@@ -372,6 +379,8 @@ export default function App() {
       {tab === 'carte' && (
         <DepartementStatsView lists={lists} onListsChange={setLists} creneauxMap={creneauxMap} />
       )}
+
+      {tab === 'performance' && <PerformanceView />}
 
       {categoryEditorOpen && (
         <CategoryEditor

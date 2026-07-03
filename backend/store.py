@@ -63,6 +63,9 @@ _ALTER_STATEMENTS = [
     "ALTER TABLE leads ADD COLUMN IF NOT EXISTS departement TEXT",
     "CREATE INDEX IF NOT EXISTS idx_leads_dept ON leads(departement)",
     # ── Phase 3 : budgets de closing (dashboard) ────────────────────────────
+    # NB : budget_propose/budget_final sur list_leads sont désormais mortes
+    # (plus lues ni écrites, cf. Phase 5 ci-dessous) — conservées comme filet
+    # de sécurité, suppression dans un nettoyage ultérieur séparé.
     "ALTER TABLE list_leads ADD COLUMN IF NOT EXISTS budget_propose REAL",
     "ALTER TABLE list_leads ADD COLUMN IF NOT EXISTS budget_final REAL",
     # ── Usage partagé (Daniel/Clément) : visibilité, pas séparation des données ──
@@ -71,6 +74,23 @@ _ALTER_STATEMENTS = [
     # par lead) : qui suit cette liste, et son urgence relative ──
     "ALTER TABLE prospect_lists ADD COLUMN IF NOT EXISTS assigned_to TEXT",
     "ALTER TABLE prospect_lists ADD COLUMN IF NOT EXISTS priorite TEXT",
+    # ── Phase 5 : statut partagé entre listes ────────────────────────────────
+    # Le statut d'un établissement (et ce qui en découle : devis, closing)
+    # est une propriété du LEAD, pas de sa relation à telle ou telle liste —
+    # sinon un même établissement présent dans 2 listes peut afficher 2
+    # statuts différents, avec le risque concret de le rappeler deux fois.
+    # `list_leads.status/budget_propose/budget_final/closed_at` restent en
+    # base (filet de sécurité) mais ne sont plus lues/écrites après migration
+    # (cf. backend/migrate_shared_status.py) — la source de vérité est ici.
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'a_contacter'",
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS budget_propose REAL",
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS budget_final REAL",
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS closed_at TEXT",
+    # Horodatage du dernier changement de statut — sert de tri pour la
+    # todo-list des rappels (remplace list_leads.updated_at, qui ne bouge
+    # plus au changement de statut désormais stocké sur `leads`).
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS status_updated_at TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)",
 ]
 
 # Historique des scans (ville ou département) — évite qu'un scan déjà fait
@@ -121,6 +141,45 @@ CREATE TABLE IF NOT EXISTS list_leads (
 
 _CLOSED_STATUSES = {'closing', 'facture_payee'}
 
+# Ordre de priorité "statut le plus avancé gagne" — utilisé pour la migration
+# (réconciliation d'un même lead ayant eu des statuts différents selon la
+# liste, sous l'ancien modèle par-liste) et, avant migration, pour trier les
+# lignes candidates dans le SQL de lecture (LATERAL JOIN). Une seule source
+# de vérité pour cet ordre, dupliqué 3x auparavant.
+_STATUS_PRIORITY: dict[str, int] = {
+    'facture_payee': 6,
+    'closing': 5,
+    'devis_relance': 4,
+    'devis_envoye': 4,
+    'pas_interesse': 2,
+    'injoignable': 2,
+    'repondeur': 1,
+    'rappel': 1,
+}
+
+_STATUS_PRIORITY_SQL_CASE = "CASE status " + " ".join(
+    f"WHEN '{status}' THEN {prio}" for status, prio in _STATUS_PRIORITY.items()
+) + " ELSE 0 END"
+
+_CREATE_LEAD_EVENTS = """
+CREATE TABLE IF NOT EXISTS lead_events (
+    id          TEXT PRIMARY KEY,
+    lead_id     TEXT NOT NULL,
+    list_id     TEXT,
+    actor       TEXT,
+    event_type  TEXT NOT NULL,   -- 'appel' | 'devis'
+    from_status TEXT,
+    to_status   TEXT NOT NULL,
+    created_at  TEXT NOT NULL
+)
+"""
+_CREATE_IDX_LEAD_EVENTS_ACTOR = (
+    "CREATE INDEX IF NOT EXISTS idx_lead_events_actor ON lead_events(actor, created_at)"
+)
+_CREATE_IDX_LEAD_EVENTS_TYPE = (
+    "CREATE INDEX IF NOT EXISTS idx_lead_events_type ON lead_events(event_type, created_at)"
+)
+
 
 def _affected(status: str) -> int:
     """Extrait le nombre de lignes affectées d'un status asyncpg (ex. 'UPDATE 1')."""
@@ -157,6 +216,9 @@ class LeadStore:
             await conn.execute(_CREATE_LIST_LEADS)
             await conn.execute(_CREATE_SCAN_HISTORY)
             await conn.execute(_CREATE_IDX_SCAN_HISTORY)
+            await conn.execute(_CREATE_LEAD_EVENTS)
+            await conn.execute(_CREATE_IDX_LEAD_EVENTS_ACTOR)
+            await conn.execute(_CREATE_IDX_LEAD_EVENTS_TYPE)
             for stmt in _ALTER_STATEMENTS:
                 await conn.execute(stmt)
         await self.backfill_postcodes()
@@ -271,28 +333,13 @@ class LeadStore:
             conditions.append("l.gmaps_status IS DISTINCT FROM 'closed_permanently'")
 
         where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-        # `contact_status` : statut le plus avancé parmi toutes les listes de
-        # prospection contenant ce lead (même logique que get_leads_in_bounds)
-        # — sert à afficher "déjà appelé" côté Recherche pour ne pas relancer
-        # un contact déjà fait, même en dehors de la vue carte.
+        # `contact_status` : statut du lead lui-même (propriété partagée entre
+        # toutes les listes qui le contiennent, cf. Phase 5) — sert à afficher
+        # "déjà appelé" côté Recherche pour ne pas relancer un contact déjà
+        # fait, même en dehors de la vue carte.
         sql = f"""
-            SELECT l.*, ll.status AS contact_status
+            SELECT l.*, NULLIF(l.status, 'a_contacter') AS contact_status
             FROM leads l
-            LEFT JOIN LATERAL (
-                SELECT status FROM list_leads WHERE lead_id = l.id
-                ORDER BY CASE status
-                    WHEN 'facture_payee' THEN 6
-                    WHEN 'closing' THEN 5
-                    WHEN 'devis_relance' THEN 4
-                    WHEN 'devis_envoye' THEN 4
-                    WHEN 'pas_interesse' THEN 2
-                    WHEN 'injoignable' THEN 2
-                    WHEN 'repondeur' THEN 1
-                    WHEN 'rappel' THEN 1
-                    ELSE 0
-                END DESC
-                LIMIT 1
-            ) ll ON true
             {where}
             ORDER BY l.score DESC, l.name ASC
         """
@@ -379,32 +426,18 @@ class LeadStore:
         Toujours borné au rectangle visible + LIMIT : jamais tous les leads de
         France chargés en mémoire, uniquement ce qui est affiché à l'écran.
 
-        `contact_status` : statut le plus avancé trouvé parmi TOUTES les listes
-        de prospection contenant ce lead (un lead peut être dans plusieurs
-        listes) — NULL s'il n'est dans aucune liste. Sert au code couleur des
-        marqueurs précis côté carte (le niveau macro/bulles reste sur la seule
-        densité de leads chauds, inchangé)."""
+        `contact_status` : statut du lead lui-même (propriété partagée entre
+        toutes les listes qui le contiennent, cf. Phase 5) — NULL n'existe
+        plus (défaut 'a_contacter'), traité côté frontend comme "pas encore
+        contacté". Sert au code couleur des marqueurs précis côté carte (le
+        niveau macro/bulles reste sur la seule densité de leads chauds,
+        inchangé)."""
         rows = await self.pool.fetch(
             f"""
             SELECT l.id, l.name, l.address, l.phone, l.website, l.web_status, l.business_type,
                    l.score, l.temperature, l.gmaps_status, l.gmaps_website, l.gmaps_url,
-                   l.city, l.lat, l.lng, ll.status AS contact_status
+                   l.city, l.lat, l.lng, NULLIF(l.status, 'a_contacter') AS contact_status
             FROM leads l
-            LEFT JOIN LATERAL (
-                SELECT status FROM list_leads WHERE lead_id = l.id
-                ORDER BY CASE status
-                    WHEN 'facture_payee' THEN 6
-                    WHEN 'closing' THEN 5
-                    WHEN 'devis_relance' THEN 4
-                    WHEN 'devis_envoye' THEN 4
-                    WHEN 'pas_interesse' THEN 2
-                    WHEN 'injoignable' THEN 2
-                    WHEN 'repondeur' THEN 1
-                    WHEN 'rappel' THEN 1
-                    ELSE 0
-                END DESC
-                LIMIT 1
-            ) ll ON true
             WHERE l.temperature = 'chaud' AND {_ACTIVE_PIPELINE_WHERE}
               AND l.lat BETWEEN $1 AND $2 AND l.lng BETWEEN $3 AND $4
               AND ($5::text[] IS NULL OR l.business_type = ANY($5))
@@ -681,49 +714,103 @@ class LeadStore:
         budget_propose: Optional[float] = None,
         budget_final: Optional[float] = None,
         assigned_to: Optional[str] = None,
+        by: Optional[str] = None,
     ) -> bool:
+        """`status`/`budget_propose`/`budget_final`/`closed_at` sont des
+        propriétés du LEAD (partagées entre toutes les listes qui le
+        contiennent, cf. Phase 5) -> écrites sur `leads`. `notes`/
+        `assigned_to` restent propres à CETTE liste -> écrites sur
+        `list_leads`. `by` (identité de l'auteur) sert uniquement à tracer
+        l'événement dans `lead_events` (onglet Performance) quand le statut
+        change réellement."""
         now = datetime.now(timezone.utc).isoformat()
-        sets: list[str] = ["updated_at = $1"]
-        values: list[Any] = [now]
 
-        if status is not None:
-            values.append(status)
-            sets.append(f"status = ${len(values)}")
-            if status in _CLOSED_STATUSES:
-                values.append(now)
-                sets.append(f"closed_at = COALESCE(closed_at, ${len(values)})")
-            else:
-                sets.append("closed_at = NULL")
-        if notes is not None:
-            values.append(notes)
-            sets.append(f"notes = ${len(values)}")
-        if budget_propose is not None:
-            values.append(budget_propose)
-            sets.append(f"budget_propose = ${len(values)}")
-        if budget_final is not None:
-            values.append(budget_final)
-            sets.append(f"budget_final = ${len(values)}")
-        if assigned_to is not None:
-            # Chaîne vide = "non assigné" explicite (distinct de "ne pas modifier").
-            values.append(assigned_to or None)
-            sets.append(f"assigned_to = ${len(values)}")
+        async with self.pool.acquire() as conn:
+            async with conn.transaction():
+                exists = await conn.fetchval(
+                    "SELECT 1 FROM list_leads WHERE list_id = $1 AND lead_id = $2", list_id, lead_id
+                )
+                if not exists:
+                    return False
 
-        values.extend([list_id, lead_id])
-        sql = (
-            f"UPDATE list_leads SET {', '.join(sets)} "
-            f"WHERE list_id = ${len(values) - 1} AND lead_id = ${len(values)}"
-        )
-        db_status = await self.pool.execute(sql, *values)
-        updated = _affected(db_status) > 0
-        if updated:
-            await self.pool.execute("UPDATE prospect_lists SET updated_at = $1 WHERE id = $2", now, list_id)
-        return updated
+                list_sets: list[str] = ["updated_at = $1"]
+                list_values: list[Any] = [now]
+                if notes is not None:
+                    list_values.append(notes)
+                    list_sets.append(f"notes = ${len(list_values)}")
+                if assigned_to is not None:
+                    # Chaîne vide = "non assigné" explicite (distinct de "ne pas modifier").
+                    list_values.append(assigned_to or None)
+                    list_sets.append(f"assigned_to = ${len(list_values)}")
+                if len(list_sets) > 1:
+                    list_values.extend([list_id, lead_id])
+                    await conn.execute(
+                        f"UPDATE list_leads SET {', '.join(list_sets)} "
+                        f"WHERE list_id = ${len(list_values) - 1} AND lead_id = ${len(list_values)}",
+                        *list_values,
+                    )
+
+                if status is not None or budget_propose is not None or budget_final is not None:
+                    old_status = (
+                        await conn.fetchval("SELECT status FROM leads WHERE id = $1", lead_id)
+                        if status is not None else None
+                    )
+
+                    lead_sets: list[str] = []
+                    lead_values: list[Any] = []
+                    if status is not None:
+                        lead_values.append(status)
+                        lead_sets.append(f"status = ${len(lead_values)}")
+                        lead_values.append(now)
+                        lead_sets.append(f"status_updated_at = ${len(lead_values)}")
+                        if status in _CLOSED_STATUSES:
+                            lead_values.append(now)
+                            lead_sets.append(f"closed_at = COALESCE(closed_at, ${len(lead_values)})")
+                        else:
+                            lead_sets.append("closed_at = NULL")
+                    if budget_propose is not None:
+                        lead_values.append(budget_propose)
+                        lead_sets.append(f"budget_propose = ${len(lead_values)}")
+                    if budget_final is not None:
+                        lead_values.append(budget_final)
+                        lead_sets.append(f"budget_final = ${len(lead_values)}")
+
+                    lead_values.append(lead_id)
+                    await conn.execute(
+                        f"UPDATE leads SET {', '.join(lead_sets)} WHERE id = ${len(lead_values)}", *lead_values
+                    )
+
+                    # "Un appel" = un changement de statut effectif (pas de log
+                    # d'appel dédié) ; "un devis" = entrée dans devis_envoye.
+                    if status is not None and status != old_status:
+                        await conn.execute(
+                            """
+                            INSERT INTO lead_events (id, lead_id, list_id, actor, event_type, from_status, to_status, created_at)
+                            VALUES ($1,$2,$3,$4,'appel',$5,$6,$7)
+                            """,
+                            str(uuid.uuid4()), lead_id, list_id, by, old_status, status, now,
+                        )
+                        if status == 'devis_envoye':
+                            await conn.execute(
+                                """
+                                INSERT INTO lead_events (id, lead_id, list_id, actor, event_type, from_status, to_status, created_at)
+                                VALUES ($1,$2,$3,$4,'devis',$5,$6,$7)
+                                """,
+                                str(uuid.uuid4()), lead_id, list_id, by, old_status, status, now,
+                            )
+
+                await conn.execute("UPDATE prospect_lists SET updated_at = $1 WHERE id = $2", now, list_id)
+
+        return True
 
     async def get_list_leads(self, list_id: str) -> list[dict[str, Any]]:
+        # `status`/`budget_propose`/`budget_final`/`closed_at` viennent tous
+        # de `l.*` désormais (propriétés du lead, partagées entre listes,
+        # cf. Phase 5) — `list_status` reste le nom de clé attendu côté
+        # frontend, juste réalimenté depuis `l.status` au lieu de `ll.status`.
         rows = await self.pool.fetch("""
-            SELECT l.*, ll.status AS list_status, ll.notes AS list_notes,
-                   ll.added_at, ll.updated_at AS ll_updated_at, ll.closed_at,
-                   ll.budget_propose, ll.budget_final, ll.assigned_to
+            SELECT l.*, l.status AS list_status, ll.notes AS list_notes,
+                   ll.added_at, ll.updated_at AS ll_updated_at, ll.assigned_to
             FROM list_leads ll
             JOIN leads l ON l.id = ll.lead_id
             WHERE ll.list_id = $1
@@ -732,18 +819,20 @@ class LeadStore:
         return [dict(r) for r in rows]
 
     async def get_rappels(self) -> list[dict[str, Any]]:
-        """Tous les leads tagués 'rappel' dans au moins une liste de
-        prospection, toutes listes confondues — sert de todo-list des
-        rappels à faire, indépendamment de la liste/ville/département."""
+        """Tous les leads tagués 'rappel' (statut partagé, cf. Phase 5),
+        toutes listes confondues — sert de todo-list des rappels à faire,
+        indépendamment de la liste/ville/département. Un même lead présent
+        dans plusieurs listes apparaît une fois par liste (contexte de suivi
+        propre à chaque liste : notes, assignation)."""
         rows = await self.pool.fetch("""
             SELECT l.id, l.name, l.phone, l.address, l.city, l.business_type,
                    ll.list_id, pl.name AS list_name, ll.notes AS list_notes,
-                   ll.assigned_to, ll.updated_at
+                   ll.assigned_to, l.status_updated_at AS updated_at
             FROM list_leads ll
             JOIN leads l ON l.id = ll.lead_id
             JOIN prospect_lists pl ON pl.id = ll.list_id
-            WHERE ll.status = 'rappel'
-            ORDER BY ll.updated_at ASC
+            WHERE l.status = 'rappel'
+            ORDER BY l.status_updated_at ASC
         """)
         return [dict(r) for r in rows]
 
@@ -784,27 +873,22 @@ class LeadStore:
     # ── Dashboard commercial (tous les prospect_lists confondus) ────────────────
 
     async def get_pipeline_funnel(self) -> dict[str, Any]:
-        """Vue d'ensemble du pipeline, tous-listes, un lead compté une seule
-        fois (statut le plus avancé si présent dans plusieurs listes) :
+        """Vue d'ensemble du pipeline, un lead compté une seule fois (statut
+        étant désormais une propriété du lead lui-même, cf. Phase 5) :
         combien de leads ont été appelés (tout statut sauf 'a_contacter'),
         quelle part a reçu un devis, et le CA potentiel si 100% des devis
         déjà envoyés étaient signés (montant final si déjà closé, sinon
-        montant proposé) — mise en avant demandée en tête du dashboard."""
-        rows = await self.pool.fetch("""
-            SELECT DISTINCT ON (lead_id) status, budget_propose, budget_final
-            FROM list_leads
-            ORDER BY lead_id, CASE status
-                WHEN 'facture_payee' THEN 6
-                WHEN 'closing' THEN 5
-                WHEN 'devis_relance' THEN 4
-                WHEN 'devis_envoye' THEN 4
-                WHEN 'pas_interesse' THEN 2
-                WHEN 'injoignable' THEN 2
-                WHEN 'repondeur' THEN 1
-                WHEN 'rappel' THEN 1
-                ELSE 0
-            END DESC
-        """)
+        montant proposé) — mise en avant demandée en tête du dashboard.
+
+        Lit directement `leads` (plus besoin de `list_leads`) : seuls les
+        leads ajoutés à au moins une liste peuvent avoir un statut différent
+        du défaut 'a_contacter', donc on peut se limiter à ceux-là (filtre
+        `status != 'a_contacter'`) sans changer le résultat — évite de
+        parcourir la totalité des leads scannés (potentiellement bien plus
+        nombreux que ceux réellement travaillés)."""
+        rows = await self.pool.fetch(
+            "SELECT status, budget_propose, budget_final FROM leads WHERE status != 'a_contacter'"
+        )
 
         _DEVIS_OU_PLUS = {'devis_envoye', 'devis_relance', 'closing', 'facture_payee'}
         total_appeles = sum(1 for r in rows if r["status"] != 'a_contacter')
@@ -829,10 +913,9 @@ class LeadStore:
         target_month = month or date.today().isoformat()[:7]
 
         rows = await self.pool.fetch("""
-            SELECT ll.status, ll.budget_final, ll.closed_at, l.business_type
-            FROM list_leads ll
-            JOIN leads l ON l.id = ll.lead_id
-            WHERE ll.status = ANY($1) AND ll.closed_at IS NOT NULL
+            SELECT status, budget_final, closed_at, business_type
+            FROM leads
+            WHERE status = ANY($1) AND closed_at IS NOT NULL
         """, list(_CLOSED_STATUSES))
 
         categories = load_categories()
@@ -897,3 +980,87 @@ class LeadStore:
             "categories": categories_out,
             **funnel,
         }
+
+    # ── Onglet Performance (VS Clément/Daniel) ───────────────────────────────
+
+    async def get_performance(self, period: str = "day") -> dict[str, Any]:
+        """Agrège `lead_events` par auteur : appels passés et devis envoyés
+        (compteur du jour + cumulé sur `period`), et le CA potentiel de ces
+        devis (budget_max ou budget_min de la catégorie du business_type du
+        lead, cf. categories.py — jamais un montant fixe unique). Aucune
+        liste d'utilisateurs codée en dur : seuls les acteurs ayant au moins
+        un événement apparaissent, le frontend complète à 0 pour Clément/
+        Daniel si absents.
+
+        Inclut aussi une tendance quotidienne (7 derniers jours, tous types
+        d'événements confondus) par acteur pour le petit graphique optionnel.
+        """
+        now = datetime.now(timezone.utc)
+        today_start = datetime(now.year, now.month, now.day, tzinfo=timezone.utc)
+        if period == "week":
+            period_start = (today_start - timedelta(days=today_start.weekday()))
+        elif period == "month":
+            period_start = today_start.replace(day=1)
+        else:
+            period_start = today_start
+
+        trend_start = today_start - timedelta(days=6)
+        query_start = min(period_start, trend_start).isoformat()
+        today_start_iso = today_start.isoformat()
+        period_start_iso = period_start.isoformat()
+
+        rows = await self.pool.fetch(
+            """
+            SELECT e.actor, e.event_type, e.created_at, l.business_type
+            FROM lead_events e
+            JOIN leads l ON l.id = e.lead_id
+            WHERE e.created_at >= $1
+            """,
+            query_start,
+        )
+
+        categories = load_categories()
+        type_to_cat = types_to_category(categories)
+
+        def _budget_ref(business_type: Optional[str]) -> float:
+            cat = type_to_cat.get(business_type, "Autre")
+            entry = categories.get(cat, {})
+            return (entry.get("budget_max") or entry.get("budget_min") or 0.0)
+
+        users: dict[str, dict[str, Any]] = {}
+        trend: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+
+        for r in rows:
+            actor = r["actor"] or "Non attribué"
+            u = users.setdefault(actor, {
+                "appels_jour": 0, "appels_periode": 0,
+                "devis_jour": 0, "devis_periode": 0,
+                "ca_potentiel": 0.0,
+            })
+            is_today = r["created_at"] >= today_start_iso
+            is_period = r["created_at"] >= period_start_iso
+
+            if r["created_at"] >= trend_start.isoformat():
+                trend[actor][r["created_at"][:10]] += 1
+
+            if r["event_type"] == "appel":
+                if is_period:
+                    u["appels_periode"] += 1
+                if is_today:
+                    u["appels_jour"] += 1
+            elif r["event_type"] == "devis":
+                if is_period:
+                    u["devis_periode"] += 1
+                    u["ca_potentiel"] = round(u["ca_potentiel"] + _budget_ref(r["business_type"]), 2)
+                if is_today:
+                    u["devis_jour"] += 1
+
+        for actor, u in users.items():
+            u["trend"] = [
+                {"date": d, "count": trend[actor].get(d, 0)}
+                for d in (
+                    (trend_start + timedelta(days=i)).date().isoformat() for i in range(7)
+                )
+            ]
+
+        return {"period": period, "users": users}

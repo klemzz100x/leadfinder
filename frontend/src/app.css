@@ -681,6 +681,7 @@ main { flex: 1; }
 .btn-call:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .btn-notes {
+  position: relative;
   background: none;
   border: 1px solid var(--surface2);
   border-radius: 8px;
@@ -691,6 +692,22 @@ main { flex: 1; }
   color: var(--muted);
 }
 .btn-notes:hover { background: var(--surface2); color: var(--text); }
+
+.btn-notes-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+}
 
 /* ── Web status badge ── */
 .web-badge {
@@ -1911,6 +1928,176 @@ main { flex: 1; }
 .dashboard-progress-fill.dashboard-progress-ca { background: var(--chaud, #22c55e); }
 
 .dashboard-cat-budget { font-size: 0.75rem; color: var(--muted); }
+
+/* ── Onglet Performance (écran VS Clément/Daniel) ─────────────────────── */
+
+.perf-view {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  background: radial-gradient(ellipse at 50% 0%, rgba(59, 130, 246, 0.12), transparent 60%),
+              radial-gradient(ellipse at 50% 100%, rgba(239, 68, 68, 0.10), transparent 60%);
+  border-radius: var(--radius);
+  min-height: 60vh;
+}
+
+.perf-period-selector {
+  display: flex;
+  gap: 0.3rem;
+  align-self: center;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  padding: 3px;
+}
+.perf-period-btn {
+  padding: 0.4rem 1.1rem;
+  border: none;
+  border-radius: 99px;
+  background: transparent;
+  color: var(--muted);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.perf-period-btn:hover { color: var(--text); }
+.perf-period-btn.active { background: var(--accent); color: #fff; }
+
+.perf-gauge-track {
+  height: 10px;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #ef4444, #3b82f6);
+  opacity: 0.25;
+  overflow: hidden;
+  position: relative;
+}
+.perf-gauge-fill {
+  position: absolute;
+  inset: 0;
+  right: auto;
+  background: #3b82f6;
+  opacity: 0.9;
+  border-radius: 99px;
+  transition: width 0.4s ease;
+}
+
+.perf-arena {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+.perf-vs {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.4rem;
+  font-weight: 900;
+  font-style: italic;
+  letter-spacing: 0.05em;
+  color: var(--text);
+  background: var(--bg);
+  border: 2px solid var(--surface2);
+  border-radius: 50%;
+  width: 3.2rem;
+  height: 3.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: var(--shadow-hover);
+  z-index: 2;
+}
+
+.perf-fighter {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--surface2);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--fighter-color) 14%, var(--surface)), var(--surface));
+  overflow: hidden;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.perf-fighter::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border: 2px solid var(--fighter-color);
+  opacity: 0.25;
+  border-radius: var(--radius);
+  pointer-events: none;
+}
+.perf-fighter-leading {
+  border-color: var(--fighter-color);
+  box-shadow: 0 0 28px color-mix(in srgb, var(--fighter-color) 45%, transparent);
+}
+.perf-fighter-leading::before { opacity: 0.6; }
+
+.perf-crown {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.6rem;
+  font-size: 1.4rem;
+  filter: drop-shadow(0 0 6px rgba(250, 204, 21, 0.7));
+}
+
+.perf-fighter-name {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--fighter-color);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.perf-score-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.4rem; }
+.perf-score-value {
+  font-size: 2.1rem;
+  font-weight: 900;
+  color: var(--text);
+  text-shadow: 0 0 18px color-mix(in srgb, var(--fighter-color) 55%, transparent);
+}
+
+.perf-stat-row {
+  display: flex;
+  gap: 1.1rem;
+  margin-top: 0.6rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+.perf-stat { display: flex; flex-direction: column; align-items: center; gap: 0.1rem; }
+.perf-stat-value { font-size: 1.15rem; font-weight: 800; color: var(--text); }
+.perf-stat-label { font-size: 0.68rem; color: var(--muted); white-space: nowrap; }
+
+.perf-trend {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 32px;
+  margin-top: 0.6rem;
+  width: 100%;
+  max-width: 200px;
+}
+.perf-trend-col { flex: 1; height: 100%; display: flex; align-items: flex-end; }
+.perf-trend-fill {
+  width: 100%;
+  min-height: 2px;
+  background: var(--fighter-color);
+  opacity: 0.65;
+  border-radius: 2px 2px 0 0;
+}
+
+@media (max-width: 640px) {
+  .perf-arena { grid-template-columns: 1fr; }
+  .perf-vs { position: static; margin: -0.5rem auto; }
+}
 
 /* ── Carte départements (leads chauds) ────────────────────────────────── */
 

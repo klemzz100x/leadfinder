@@ -121,6 +121,7 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
             onClick={() => setShowNotes(v => !v)}
             title="Notes"
           >
+            {lead.list_notes?.trim() && <span className="btn-notes-badge">1</span>}
             📝
           </button>
           <a

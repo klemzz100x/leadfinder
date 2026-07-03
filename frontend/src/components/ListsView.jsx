@@ -6,7 +6,7 @@ import {
 } from '../api.js'
 import ListLeadRow, { STATUSES } from './ListLeadRow.jsx'
 import ListStats from './ListStats.jsx'
-import { USERS } from '../identity.js'
+import { USERS, getCurrentUser } from '../identity.js'
 
 export const PRIORITES = [
   { value: '',          label: 'Aucune priorité', icon: '⚪' },
@@ -101,7 +101,9 @@ export default function ListsView({ lists, onListsChange, creneauxMap }) {
   }
 
   const handleStatusChange = async (lead, status) => {
-    await patchListLead(selected.id, lead.id, { status })
+    // `by` : identité de l'auteur, sert à attribuer l'appel/devis à Clément
+    // ou Daniel dans l'onglet Performance (cf. lead_events côté backend).
+    await patchListLead(selected.id, lead.id, { status, by: getCurrentUser() })
     setListLeads(prev => prev.map(l => l.id === lead.id ? { ...l, list_status: status } : l))
     const s = await fetchListStats(selected.id)
     setStats(s)

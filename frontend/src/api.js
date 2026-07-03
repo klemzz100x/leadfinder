@@ -228,6 +228,13 @@ export async function fetchDashboard(month) {
   return res.json()
 }
 
+export async function fetchPerformance(period) {
+  const p = new URLSearchParams({ period: period || 'day' })
+  const res = await fetch(`${BASE}/performance?${p}`)
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
 export async function patchListLead(listId, leadId, data) {
   const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/leads/${encodeURIComponent(leadId)}`, {
     method: 'PATCH',

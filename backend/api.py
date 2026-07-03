@@ -117,6 +117,7 @@ class PatchListLeadRequest(BaseModel):
     budget_propose: Optional[float] = None
     budget_final: Optional[float] = None
     assigned_to: Optional[str] = None
+    by: Optional[str] = None  # identité légère (Daniel/Clément) — attribution de l'événement
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -425,7 +426,7 @@ async def patch_list_lead(list_id: str, lead_id: str, data: PatchListLeadRequest
     updated = await store.patch_list_lead(
         list_id, lead_id, status=data.status, notes=data.notes,
         budget_propose=data.budget_propose, budget_final=data.budget_final,
-        assigned_to=data.assigned_to,
+        assigned_to=data.assigned_to, by=data.by,
     )
     if not updated:
         raise HTTPException(404, "Lead non trouvé dans cette liste")
@@ -437,6 +438,16 @@ async def get_dashboard(month: Optional[str] = Query(None, description="YYYY-MM,
     """Dashboard commercial agrégé (tous les prospect_lists confondus) : closes du
     mois, CA réel vs objectif par catégorie, classement, streak."""
     return await store.get_dashboard_stats(month=month)
+
+
+@app.get("/api/performance")
+async def get_performance(
+    period: str = Query("day", pattern="^(day|week|month)$"),
+) -> dict:
+    """Onglet Performance (VS Clément/Daniel) : appels/devis/CA potentiel
+    par personne, dérivés de `lead_events` (journal des changements de
+    statut)."""
+    return await store.get_performance(period=period)
 
 
 @app.get("/api/categories")
