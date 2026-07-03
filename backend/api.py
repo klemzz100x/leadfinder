@@ -23,10 +23,26 @@ from .categories import load_categories, save_categories, types_to_category
 from .creneaux import load_familles, save_familles, types_to_creneau
 from .departements import DEPARTEMENT_CENTROIDS, DEPARTEMENTS
 from .pipeline import ScanSummary, scan_city, scan_departement
+from .pricing import suggest_price
 from .sources.osm import USER_AGENT
 from .store import LeadStore
 
 log = logging.getLogger("leadfinder.api")
+
+
+def _with_devis_suggere(lead: dict) -> dict:
+    """Ajoute le prix de devis suggéré (backend/pricing.py) à un lead déjà
+    chargé — calcul pur en mémoire (pas de requête supplémentaire), à partir
+    des signaux déjà stockés en base (gmaps_rating/gmaps_user_ratings_total,
+    remplis lors de la vérification Google Places existante)."""
+    suggestion = suggest_price(
+        lead.get("business_type"), lead.get("gmaps_rating"), lead.get("gmaps_user_ratings_total"),
+    )
+    lead["devis_suggere"] = {
+        "prix": suggestion.prix,
+        "justification": suggestion.justification,
+    }
+    return lead
 
 store = LeadStore()
 _http: httpx.AsyncClient  # initialisé dans lifespan
@@ -193,13 +209,14 @@ async def get_leads(
         else:
             business_type = type
 
-    return await store.get_leads(
+    leads = await store.get_leads(
         city=city, temperature=temperature,
         business_type=business_type, business_types=business_types,
         exclude_business_types=exclude_business_types,
         show_equipped=show_equipped, show_closed=show_closed,
         departements=departements,
     )
+    return [_with_devis_suggere(l) for l in leads]
 
 
 @app.get("/api/leads/meta")
@@ -411,7 +428,8 @@ async def get_list_stats(list_id: str) -> dict:
 
 @app.get("/api/lists/{list_id}/leads")
 async def get_list_leads(list_id: str) -> list[dict]:
-    return await store.get_list_leads(list_id)
+    leads = await store.get_list_leads(list_id)
+    return [_with_devis_suggere(l) for l in leads]
 
 
 @app.post("/api/lists/{list_id}/leads")
@@ -552,10 +570,11 @@ async def leads_geo(
     if activite:
         cat = load_categories().get(activite)
         business_types = cat["types"] if cat else []
-    return await store.get_leads_in_bounds(
+    leads = await store.get_leads_in_bounds(
         south=south, west=west, north=north, east=east,
         business_types=business_types, limit=limit,
     )
+    return [_with_devis_suggere(l) for l in leads]
 
 
 # Enregistré après toutes les routes GET /api/leads/... plus spécifiques

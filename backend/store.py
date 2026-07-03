@@ -99,6 +99,12 @@ _ALTER_STATEMENTS = [
     # get_devis_a_relancer). NULL = pas (encore) coché envoyé.
     "ALTER TABLE leads ADD COLUMN IF NOT EXISTS devis_envoye_le TEXT",
     "CREATE INDEX IF NOT EXISTS idx_leads_devis_envoye_le ON leads(devis_envoye_le)",
+    # ── Phase 7 : signaux Google Places pour le prix de devis suggéré ───────
+    # Récupérés au même appel Place Details que gmaps_status/website (même
+    # tier de facturation "Enterprise" que websiteUri, donc coût marginal
+    # nul — cf. backend/pricing.py pour l'utilisation).
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS gmaps_rating REAL",
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS gmaps_user_ratings_total INTEGER",
 ]
 
 # Historique des scans (ville ou département) — évite qu'un scan déjà fait
@@ -444,6 +450,7 @@ class LeadStore:
             f"""
             SELECT l.id, l.name, l.address, l.phone, l.website, l.web_status, l.business_type,
                    l.score, l.temperature, l.gmaps_status, l.gmaps_website, l.gmaps_url,
+                   l.gmaps_rating, l.gmaps_user_ratings_total,
                    l.city, l.lat, l.lng, NULLIF(l.status, 'a_contacter') AS contact_status
             FROM leads l
             WHERE l.temperature = 'chaud' AND {_ACTIVE_PIPELINE_WHERE}
@@ -508,6 +515,8 @@ class LeadStore:
         web_status: Optional[str] = None,
         temperature: Optional[str] = None,
         score: Optional[float] = None,
+        gmaps_rating: Optional[float] = None,
+        gmaps_user_ratings_total: Optional[int] = None,
     ) -> None:
         now = datetime.now(timezone.utc).isoformat()
         sets = [
@@ -523,6 +532,12 @@ class LeadStore:
         if score is not None:
             values.append(score)
             sets.append(f"score = ${len(values)}")
+        if gmaps_rating is not None:
+            values.append(gmaps_rating)
+            sets.append(f"gmaps_rating = ${len(values)}")
+        if gmaps_user_ratings_total is not None:
+            values.append(gmaps_user_ratings_total)
+            sets.append(f"gmaps_user_ratings_total = ${len(values)}")
         values.append(lead_id)
         await self.pool.execute(f"UPDATE leads SET {', '.join(sets)} WHERE id = ${len(values)}", *values)
 

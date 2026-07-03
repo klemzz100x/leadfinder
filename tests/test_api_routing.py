@@ -25,7 +25,12 @@ def test_leads_geo_route_not_shadowed_by_lead_id_catchall(monkeypatch):
     resp = client.get("/api/leads/geo", params={"south": 0, "west": 0, "north": 1, "east": 1})
 
     assert resp.status_code == 200
-    assert resp.json() == [{"marker": "geo-endpoint-hit"}]
+    # Pas d'égalité exacte : /api/leads/geo enrichit chaque lead avec
+    # devis_suggere (backend/pricing.py) avant de le renvoyer, seul le
+    # marqueur importe ici pour prouver que le bon handler a été atteint.
+    body = resp.json()
+    assert len(body) == 1
+    assert body[0]["marker"] == "geo-endpoint-hit"
 
 
 def test_leads_meta_route_not_shadowed_by_lead_id_catchall(monkeypatch):

@@ -57,7 +57,10 @@ async def _get_place_details(client: httpx.AsyncClient, place_id: str) -> Option
         _DETAILS_URL.format(place_id=place_id),
         headers={
             "X-Goog-Api-Key": settings.GOOGLE_PLACES_API_KEY,
-            "X-Goog-FieldMask": "businessStatus,websiteUri,googleMapsUri",
+            # rating/userRatingCount ajoutés pour le prix de devis suggéré
+            # (backend/pricing.py) : même tier "Place Details Enterprise" que
+            # websiteUri déjà demandé ci-dessous, donc coût marginal nul.
+            "X-Goog-FieldMask": "businessStatus,websiteUri,googleMapsUri,rating,userRatingCount",
         },
     )
     if resp.status_code in (403, 429):
@@ -99,6 +102,8 @@ async def verify_batch(candidates: list[dict[str, Any]], client: httpx.AsyncClie
                 "gmaps_status": _STATUS_MAP.get(details.get("businessStatus"), "unchecked"),
                 "gmaps_website": details.get("websiteUri"),
                 "gmaps_url": details.get("googleMapsUri"),
+                "gmaps_rating": details.get("rating"),
+                "gmaps_user_ratings_total": details.get("userRatingCount"),
             }
     except _QuotaExhausted as exc:
         log.warning("Places API quota/permission KO, arrêt du batch (%d/%d déjà vérifiés): %s",

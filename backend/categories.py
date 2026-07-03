@@ -15,14 +15,22 @@ from typing import Any
 
 log = logging.getLogger("leadfinder.categories")
 
+# Chaque catégorie a désormais un vrai écart budget_min/budget_max (jamais
+# min == max, jamais None/None) : le prix de devis intelligent (cf.
+# backend/pricing.py) positionne le prix suggéré DANS cet écart selon le
+# score de l'établissement (avis Google, secteur...) — sans marge, le score
+# n'aurait aucun effet. Les catégories qui avaient un prix fixe ont été
+# élargies de ±15% autour de leur ancienne valeur ; celles sans budget défini
+# reprennent la fourchette générique 500-750€. Éditable comme avant via
+# CategoryEditor (aucune valeur ici n'est plus "spéciale" que les autres).
 DEFAULT_CATEGORIES: dict[str, dict[str, Any]] = {
     "Restauration": {
         "types": ["restaurant", "cafe_bar", "boulangerie", "alimentation"],
-        "budget_min": 1000, "budget_max": 1000, "objectif_closes_mensuel": None,
+        "budget_min": 850, "budget_max": 1150, "objectif_closes_mensuel": None,
     },
     "Restauration rapide": {
         "types": ["fast_food"],
-        "budget_min": 500, "budget_max": 500, "objectif_closes_mensuel": None,
+        "budget_min": 425, "budget_max": 575, "objectif_closes_mensuel": None,
     },
     "Beauté & Bien-être": {
         "types": ["coiffeur", "beaute", "sport"],
@@ -34,15 +42,15 @@ DEFAULT_CATEGORIES: dict[str, dict[str, Any]] = {
     },
     "Santé": {
         "types": ["sante", "pharmacie"],
-        "budget_min": None, "budget_max": None, "objectif_closes_mensuel": None,
+        "budget_min": 500, "budget_max": 750, "objectif_closes_mensuel": None,
     },
     "Loisirs": {
         "types": ["loisir_indoor", "hotellerie", "tourisme"],
-        "budget_min": None, "budget_max": None, "objectif_closes_mensuel": None,
+        "budget_min": 500, "budget_max": 750, "objectif_closes_mensuel": None,
     },
     "Artisans & Commerce": {
         "types": ["artisan", "commerce", "autre"],
-        "budget_min": None, "budget_max": None, "objectif_closes_mensuel": None,
+        "budget_min": 500, "budget_max": 750, "objectif_closes_mensuel": None,
     },
 }
 

@@ -205,6 +205,8 @@ async def _verify_gmaps_signals(cities: list[str], store: LeadStore, client: htt
             web_status=web_status,
             temperature=temperature,
             score=score,
+            gmaps_rating=r.get("gmaps_rating"),
+            gmaps_user_ratings_total=r.get("gmaps_user_ratings_total"),
         )
 
     return len(results)

@@ -123,6 +123,15 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
             <span className="score-value">{lead.score.toFixed(2)}</span>
           </div>
 
+          {lead.devis_suggere && (
+            <span
+              className="devis-suggere-badge"
+              title="Prix indicatif basé sur note/avis Google et secteur — à ajuster au feeling pendant l'appel"
+            >
+              💰 {lead.devis_suggere.prix} € — {lead.devis_suggere.justification}
+            </span>
+          )}
+
           <div className="lead-contact">
             <span className="lead-phone">
               {lead.phone

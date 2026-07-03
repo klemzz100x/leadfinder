@@ -58,6 +58,14 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
         <div className="llr-info">
           <span className="llr-name" title={lead.address || lead.name}>{lead.name}</span>
           <span className="llr-meta">{lead.business_type}{lead.city ? ` · ${lead.city}` : ''}</span>
+          {lead.devis_suggere && (
+            <span
+              className="devis-suggere-badge"
+              title="Prix indicatif basé sur note/avis Google et secteur — à ajuster au feeling pendant l'appel"
+            >
+              💰 {lead.devis_suggere.prix} € — {lead.devis_suggere.justification}
+            </span>
+          )}
           {lead.list_notes && <span className="llr-note-preview">{lead.list_notes}</span>}
         </div>
         <div className="llr-phone">
