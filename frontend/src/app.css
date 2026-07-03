@@ -1645,6 +1645,25 @@ main { flex: 1; }
   font-size: 0.82rem;
 }
 
+.llr-devis-envoye-col { flex-shrink: 0; }
+.llr-devis-envoye-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.55rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--surface2);
+  color: var(--muted);
+  font-size: 0.78rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.llr-devis-envoye-label:has(input:checked) {
+  color: var(--green);
+  border-color: color-mix(in srgb, var(--green) 45%, transparent);
+  background: color-mix(in srgb, var(--green) 12%, transparent);
+}
+
 .llr-status-col { flex-shrink: 0; }
 .llr-assign-col { flex-shrink: 0; }
 .llr-assign-select {
@@ -1801,6 +1820,7 @@ main { flex: 1; }
   }
   .llr-phone,
   .llr-budget-col,
+  .llr-devis-envoye-col,
   .llr-assign-col,
   .llr-status-col,
   .llr-actions {

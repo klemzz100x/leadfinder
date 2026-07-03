@@ -118,6 +118,7 @@ class PatchListLeadRequest(BaseModel):
     budget_final: Optional[float] = None
     assigned_to: Optional[str] = None
     by: Optional[str] = None  # identité légère (Daniel/Clément) — attribution de l'événement
+    devis_envoye: Optional[bool] = None  # coche indépendante du statut, cf. Phase 6
 
 
 # ── Endpoints ─────────────────────────────────────────────────────────────────
@@ -366,6 +367,13 @@ async def get_rappels() -> list[dict]:
     return await store.get_rappels()
 
 
+@app.get("/api/devis-a-relancer")
+async def get_devis_a_relancer() -> list[dict]:
+    """Todo-list des devis cochés "envoyé" (date réelle, indépendante du
+    statut pipeline), toutes listes confondues, triée par ancienneté."""
+    return await store.get_devis_a_relancer()
+
+
 @app.get("/api/lists")
 async def get_lists() -> list[dict]:
     return await store.get_lists()
@@ -426,7 +434,7 @@ async def patch_list_lead(list_id: str, lead_id: str, data: PatchListLeadRequest
     updated = await store.patch_list_lead(
         list_id, lead_id, status=data.status, notes=data.notes,
         budget_propose=data.budget_propose, budget_final=data.budget_final,
-        assigned_to=data.assigned_to, by=data.by,
+        assigned_to=data.assigned_to, by=data.by, devis_envoye=data.devis_envoye,
     )
     if not updated:
         raise HTTPException(404, "Lead non trouvé dans cette liste")

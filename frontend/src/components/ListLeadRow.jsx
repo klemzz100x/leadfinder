@@ -18,7 +18,7 @@ export const STATUSES = [
 
 const STATUS_MAP = Object.fromEntries(STATUSES.map(s => [s.value, s]))
 
-export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesChange, onBudgetChange, onAssignChange, creneau }) {
+export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesChange, onBudgetChange, onAssignChange, onDevisEnvoyeChange, creneau }) {
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes] = useState(lead.list_notes || '')
   const [saving, setSaving] = useState(false)
@@ -36,6 +36,10 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
 
   const handleAssign = async (e) => {
     await onAssignChange?.(e.target.value)
+  }
+
+  const handleDevisEnvoye = async (e) => {
+    await onDevisEnvoyeChange?.(e.target.checked)
   }
 
   const handleSaveNotes = async () => {
@@ -89,6 +93,18 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
             )}
           </div>
         )}
+        <div className="llr-devis-envoye-col">
+          <label className="llr-devis-envoye-label" title="Devis réellement envoyé (indépendant du statut) — sert à relancer">
+            <input
+              type="checkbox"
+              checked={!!lead.devis_envoye_le}
+              onChange={handleDevisEnvoye}
+            />
+            {lead.devis_envoye_le
+              ? `Envoyé le ${new Date(lead.devis_envoye_le).toLocaleDateString('fr-FR')}`
+              : 'Envoyé ?'}
+          </label>
+        </div>
         <div className="llr-assign-col">
           <select
             className="llr-assign-select"

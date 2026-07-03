@@ -130,6 +130,12 @@ export async function fetchRappels() {
   return res.json()
 }
 
+export async function fetchDevisARelancer() {
+  const res = await fetch(`${BASE}/devis-a-relancer`)
+  if (!res.ok) return []
+  return res.json()
+}
+
 export async function createList(name) {
   const res = await fetch(`${BASE}/lists`, {
     method: 'POST',

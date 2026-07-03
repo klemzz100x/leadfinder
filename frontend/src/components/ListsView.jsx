@@ -124,6 +124,16 @@ export default function ListsView({ lists, onListsChange, creneauxMap }) {
     setListLeads(prev => prev.map(l => l.id === lead.id ? { ...l, assigned_to: assignedTo } : l))
   }
 
+  const handleDevisEnvoye = async (lead, checked) => {
+    await patchListLead(selected.id, lead.id, { devis_envoye: checked })
+    // Coché = horodaté côté serveur à "maintenant" ; on ne connaît pas la
+    // valeur exacte tant que la réponse n'a pas de payload, mais l'heure
+    // locale suffit pour l'affichage immédiat (re-fetch la corrigerait sinon).
+    setListLeads(prev => prev.map(l => l.id === lead.id
+      ? { ...l, devis_envoye_le: checked ? new Date().toISOString() : null }
+      : l))
+  }
+
   const handleRemove = async (lead) => {
     await removeLeadFromList(selected.id, lead.id)
     setListLeads(prev => prev.filter(l => l.id !== lead.id))
@@ -264,6 +274,7 @@ export default function ListsView({ lists, onListsChange, creneauxMap }) {
                   onNotesChange={notes => handleNotes(lead, notes)}
                   onBudgetChange={fields => handleBudget(lead, fields)}
                   onAssignChange={assignedTo => handleAssign(lead, assignedTo)}
+                  onDevisEnvoyeChange={checked => handleDevisEnvoye(lead, checked)}
                   creneau={creneauxMap?.[lead.business_type]}
                 />
               ))}

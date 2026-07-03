@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import {
   scanArea, fetchLeads, fetchMeta, fetchRawTypes, fetchDepartements, exportCsvUrl,
-  fetchCategories, fetchLists, fetchRappels, fetchCreneaux, fetchCreneauxMap,
+  fetchCategories, fetchLists, fetchRappels, fetchDevisARelancer, fetchCreneaux, fetchCreneauxMap,
 } from './api.js'
 import { mergeScanSummaries } from './utils.js'
 import SearchBar from './components/SearchBar.jsx'
@@ -13,6 +13,7 @@ import CategoryEditor from './components/CategoryEditor.jsx'
 import CreneauxEditor from './components/CreneauxEditor.jsx'
 import ListsView from './components/ListsView.jsx'
 import RappelsView from './components/RappelsView.jsx'
+import DevisRelanceView from './components/DevisRelanceView.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import PerformanceView from './components/PerformanceView.jsx'
 import DepartementStatsView from './components/DepartementStatsView.jsx'
@@ -48,6 +49,7 @@ export default function App() {
   // Listes partagées
   const [lists, setLists] = useState([])
   const [rappelsCount, setRappelsCount] = useState(0)
+  const [devisARelancerCount, setDevisARelancerCount] = useState(0)
   const [creneauxMap, setCreneauxMap] = useState({})
 
   useEffect(() => {
@@ -55,6 +57,7 @@ export default function App() {
     fetchDepartements().then(setDepartements)
     fetchMeta().then((meta) => setTypes(meta.types || []))
     fetchRappels().then((r) => setRappelsCount(r.length))
+    fetchDevisARelancer().then((d) => setDevisARelancerCount(d.length))
     fetchCreneauxMap().then(setCreneauxMap)
   }, [])
 
@@ -63,6 +66,7 @@ export default function App() {
   useEffect(() => {
     const id = setInterval(() => {
       fetchRappels().then((r) => setRappelsCount(r.length))
+      fetchDevisARelancer().then((d) => setDevisARelancerCount(d.length))
     }, 15000)
     return () => clearInterval(id)
   }, [])
@@ -205,6 +209,13 @@ export default function App() {
             >
               📞 Rappels
               {rappelsCount > 0 && <span className="tab-badge tab-badge-rappels">{rappelsCount}</span>}
+            </button>
+            <button
+              className={`main-tab${tab === 'devis-relance' ? ' active' : ''}`}
+              onClick={() => setTab('devis-relance')}
+            >
+              📨 Devis à relancer
+              {devisARelancerCount > 0 && <span className="tab-badge tab-badge-rappels">{devisARelancerCount}</span>}
             </button>
             <button
               className={`main-tab${tab === 'dashboard' ? ' active' : ''}`}
@@ -371,6 +382,8 @@ export default function App() {
       )}
 
       {tab === 'rappels' && <RappelsView />}
+
+      {tab === 'devis-relance' && <DevisRelanceView />}
 
       {tab === 'dashboard' && (
         <Dashboard onEditCategories={handleOpenEditor} onEditCreneaux={handleOpenCreneauxEditor} />

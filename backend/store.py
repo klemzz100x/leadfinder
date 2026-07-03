@@ -91,6 +91,14 @@ _ALTER_STATEMENTS = [
     # plus au changement de statut désormais stocké sur `leads`).
     "ALTER TABLE leads ADD COLUMN IF NOT EXISTS status_updated_at TEXT",
     "CREATE INDEX IF NOT EXISTS idx_leads_status ON leads(status)",
+    # ── Phase 6 : date d'envoi réelle du devis ──────────────────────────────
+    # Le statut 'devis_envoye' est en pratique utilisé comme "en cours de
+    # préparation", pas "réellement envoyé" — plutôt que de changer ce
+    # fonctionnement déjà pris en main, on ajoute une coche indépendante avec
+    # sa date, pour pouvoir relancer sur la base d'un vrai envoi (cf.
+    # get_devis_a_relancer). NULL = pas (encore) coché envoyé.
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS devis_envoye_le TEXT",
+    "CREATE INDEX IF NOT EXISTS idx_leads_devis_envoye_le ON leads(devis_envoye_le)",
 ]
 
 # Historique des scans (ville ou département) — évite qu'un scan déjà fait
@@ -715,14 +723,22 @@ class LeadStore:
         budget_final: Optional[float] = None,
         assigned_to: Optional[str] = None,
         by: Optional[str] = None,
+        devis_envoye: Optional[bool] = None,
     ) -> bool:
-        """`status`/`budget_propose`/`budget_final`/`closed_at` sont des
-        propriétés du LEAD (partagées entre toutes les listes qui le
-        contiennent, cf. Phase 5) -> écrites sur `leads`. `notes`/
-        `assigned_to` restent propres à CETTE liste -> écrites sur
-        `list_leads`. `by` (identité de l'auteur) sert uniquement à tracer
-        l'événement dans `lead_events` (onglet Performance) quand le statut
-        change réellement."""
+        """`status`/`budget_propose`/`budget_final`/`closed_at`/
+        `devis_envoye_le` sont des propriétés du LEAD (partagées entre
+        toutes les listes qui le contiennent, cf. Phase 5) -> écrites sur
+        `leads`. `notes`/`assigned_to` restent propres à CETTE liste ->
+        écrites sur `list_leads`. `by` (identité de l'auteur) sert
+        uniquement à tracer l'événement dans `lead_events` (onglet
+        Performance) quand le statut change réellement.
+
+        `devis_envoye` (Phase 6) est une coche indépendante du statut
+        pipeline (`status` reste utilisé comme "en cours de préparation"
+        dans l'usage actuel, pas touché) : True -> horodate maintenant
+        (chaque coche/re-coche vaut "envoyé maintenant", y compris une
+        relance) ; False -> efface la date (retire de la todo-list de
+        relance)."""
         now = datetime.now(timezone.utc).isoformat()
 
         async with self.pool.acquire() as conn:
@@ -750,7 +766,7 @@ class LeadStore:
                         *list_values,
                     )
 
-                if status is not None or budget_propose is not None or budget_final is not None:
+                if status is not None or budget_propose is not None or budget_final is not None or devis_envoye is not None:
                     old_status = (
                         await conn.fetchval("SELECT status FROM leads WHERE id = $1", lead_id)
                         if status is not None else None
@@ -774,6 +790,12 @@ class LeadStore:
                     if budget_final is not None:
                         lead_values.append(budget_final)
                         lead_sets.append(f"budget_final = ${len(lead_values)}")
+                    if devis_envoye is not None:
+                        if devis_envoye:
+                            lead_values.append(now)
+                            lead_sets.append(f"devis_envoye_le = ${len(lead_values)}")
+                        else:
+                            lead_sets.append("devis_envoye_le = NULL")
 
                     lead_values.append(lead_id)
                     await conn.execute(
@@ -833,6 +855,24 @@ class LeadStore:
             JOIN prospect_lists pl ON pl.id = ll.list_id
             WHERE l.status = 'rappel'
             ORDER BY l.status_updated_at ASC
+        """)
+        return [dict(r) for r in rows]
+
+    async def get_devis_a_relancer(self) -> list[dict[str, Any]]:
+        """Tous les leads dont le devis a été coché "envoyé" (date renseignée,
+        cf. Phase 6 — indépendant du statut pipeline), toutes listes
+        confondues, triés par date d'envoi la plus ancienne en premier (la
+        relance la plus urgente). Même logique de duplication par liste que
+        get_rappels (contexte de suivi propre à chaque liste)."""
+        rows = await self.pool.fetch("""
+            SELECT l.id, l.name, l.phone, l.address, l.city, l.business_type,
+                   l.status, l.budget_propose, l.devis_envoye_le,
+                   ll.list_id, pl.name AS list_name, ll.notes AS list_notes, ll.assigned_to
+            FROM list_leads ll
+            JOIN leads l ON l.id = ll.lead_id
+            JOIN prospect_lists pl ON pl.id = ll.list_id
+            WHERE l.devis_envoye_le IS NOT NULL
+            ORDER BY l.devis_envoye_le ASC
         """)
         return [dict(r) for r in rows]
 
