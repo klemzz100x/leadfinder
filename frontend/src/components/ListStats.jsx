@@ -8,6 +8,7 @@ const STATUS_META = {
   pas_interesse: { label: 'Pas intéressé',  color: '#ef4444' },
   devis_envoye:  { label: 'Devis envoyé',   color: '#f97316' },
   devis_relance: { label: 'Devis relancé',  color: '#fb923c' },
+  devis_rejete:  { label: 'Devis rejeté',   color: '#7f1d1d' },
   closing:       { label: 'Closing',        color: '#22c55e' },
   facture_payee: { label: 'Facture payée',  color: '#10b981' },
 }
@@ -28,7 +29,7 @@ function fmtEuros(n) {
 }
 
 export default function ListStats({ stats }) {
-  const { total, by_status, taux_contact, taux_devis, taux_closing, closings_par_jour } = stats
+  const { total, by_status, taux_contact, taux_devis, taux_closing, taux_closing_devis, closings_par_jour } = stats
   const recent = closings_par_jour.slice(-14)
   const maxCount = Math.max(1, ...recent.map(d => d.count))
   const devisEnvoyesCount = STATUTS_DEVIS_ENVOYE.reduce((sum, s) => sum + (by_status[s] || 0), 0)
@@ -52,6 +53,10 @@ export default function ListStats({ stats }) {
         <div className="kpi kpi-highlight">
           <span className="kpi-value" style={{ color: '#22c55e' }}>{taux_closing}%</span>
           <span className="kpi-label">Taux closing</span>
+        </div>
+        <div className="kpi" title="Devis gagnés / (gagnés + rejetés) — hors devis encore en négociation">
+          <span className="kpi-value" style={{ color: '#22c55e' }}>{taux_closing_devis}%</span>
+          <span className="kpi-label">Close rate (devis tranchés)</span>
         </div>
       </div>
 

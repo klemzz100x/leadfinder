@@ -43,6 +43,13 @@ export default function Dashboard({ onEditCategories, onEditCreneaux }) {
             💰 CA potentiel si 100% des devis signés
           </span>
         </div>
+        <span className="dashboard-funnel-arrow">→</span>
+        <div className="dashboard-funnel-kpi">
+          <span className="dashboard-funnel-value">{data.taux_closing_devis}%</span>
+          <span className="dashboard-funnel-label" title={`Devis gagnés / (gagnés + rejetés) — ${data.devis_rejetes} rejeté${data.devis_rejetes > 1 ? 's' : ''}, hors devis encore en négociation`}>
+            🎯 Close rate sur devis tranchés
+          </span>
+        </div>
       </div>
 
       <div className="dashboard-kpis">

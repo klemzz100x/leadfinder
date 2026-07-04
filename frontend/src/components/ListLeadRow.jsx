@@ -13,6 +13,7 @@ export const STATUSES = [
   { value: 'pas_interesse', label: 'Pas intéressé',  color: CONTACT_STATUS_COLOR.pas_interesse },
   { value: 'devis_envoye',  label: 'Devis envoyé',   color: CONTACT_STATUS_COLOR.devis_envoye },
   { value: 'devis_relance', label: 'Devis relancé',  color: CONTACT_STATUS_COLOR.devis_relance },
+  { value: 'devis_rejete',  label: 'Devis rejeté',   color: CONTACT_STATUS_COLOR.devis_rejete },
   { value: 'closing',       label: 'Closing',        color: CONTACT_STATUS_COLOR.closing },
   { value: 'facture_payee', label: 'Facture payée',  color: CONTACT_STATUS_COLOR.facture_payee },
 ]
@@ -202,6 +203,8 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
 function getGroup(status) {
   if (['closing', 'facture_payee'].includes(status)) return 'won'
   if (['pas_interesse', 'injoignable'].includes(status)) return 'lost'
-  if (['devis_envoye', 'devis_relance'].includes(status)) return 'devis'
+  // devis_rejete garde le budget proposé visible (montant perdu), contrairement
+  // à pas_interesse/injoignable qui n'ont jamais eu de devis chiffré.
+  if (['devis_envoye', 'devis_relance', 'devis_rejete'].includes(status)) return 'devis'
   return 'pipeline'
 }

@@ -920,21 +920,31 @@ class LeadStore:
         leads = await self.get_list_leads(list_id)
         if not leads:
             return {"total": 0, "by_status": {}, "taux_contact": 0.0,
-                    "taux_devis": 0.0, "taux_closing": 0.0, "closings_par_jour": []}
+                    "taux_devis": 0.0, "taux_closing": 0.0, "taux_closing_devis": 0.0,
+                    "closings_par_jour": []}
 
         by_status = Counter(l["list_status"] for l in leads)
         total = len(leads)
 
-        _DEVIS_PLUS = {'devis_envoye', 'devis_relance', 'closing', 'facture_payee'}
+        # 'devis_rejete' compte comme "a reçu un devis" (dénominateur de
+        # taux_devis / ca_potentiel) sans compter comme closing — distinct de
+        # 'pas_interesse' qui lui n'a jamais atteint le stade devis.
+        _DEVIS_PLUS = {'devis_envoye', 'devis_relance', 'devis_rejete', 'closing', 'facture_payee'}
         _NOT_CONTACTED = {'a_contacter', 'repondeur', 'injoignable'}
 
         contacted = total - sum(by_status.get(s, 0) for s in _NOT_CONTACTED)
         devis = sum(by_status.get(s, 0) for s in _DEVIS_PLUS)
         closed = sum(by_status.get(s, 0) for s in _CLOSED_STATUSES)
+        rejected = by_status.get('devis_rejete', 0)
 
         taux_contact = round(contacted / total * 100, 1) if total else 0.0
         taux_devis = round(devis / contacted * 100, 1) if contacted else 0.0
         taux_closing = round(closed / total * 100, 1) if total else 0.0
+        # Close rate réel sur les devis tranchés (gagné vs rejeté) — distinct
+        # de taux_closing qui rapporte au total de la liste, pas aux devis
+        # envoyés. Les devis encore en négociation (devis_envoye/devis_relance)
+        # ne sont pas encore tranchés, donc exclus du dénominateur.
+        taux_closing_devis = round(closed / (closed + rejected) * 100, 1) if (closed + rejected) else 0.0
 
         day_counts: dict[str, int] = defaultdict(int)
         for lead in leads:
@@ -947,6 +957,7 @@ class LeadStore:
             "taux_contact": taux_contact,
             "taux_devis": taux_devis,
             "taux_closing": taux_closing,
+            "taux_closing_devis": taux_closing_devis,
             "closings_par_jour": [{"date": d, "count": c} for d, c in sorted(day_counts.items())],
         }
 
@@ -970,19 +981,28 @@ class LeadStore:
             "SELECT status, budget_propose, budget_final FROM leads WHERE status != 'a_contacter'"
         )
 
-        _DEVIS_OU_PLUS = {'devis_envoye', 'devis_relance', 'closing', 'facture_payee'}
+        # 'devis_rejete' compte comme "devis envoyé" (a bien atteint ce stade)
+        # sans être un closing — cf. get_list_stats pour le même raisonnement.
+        _DEVIS_OU_PLUS = {'devis_envoye', 'devis_relance', 'devis_rejete', 'closing', 'facture_payee'}
         total_appeles = sum(1 for r in rows if r["status"] != 'a_contacter')
         devis_envoyes = sum(1 for r in rows if r["status"] in _DEVIS_OU_PLUS)
+        devis_rejetes = sum(1 for r in rows if r["status"] == 'devis_rejete')
+        closes = sum(1 for r in rows if r["status"] in _CLOSED_STATUSES)
         ca_potentiel = sum(
             (r["budget_final"] if r["status"] in _CLOSED_STATUSES else r["budget_propose"]) or 0.0
             for r in rows if r["status"] in _DEVIS_OU_PLUS
         )
         taux_devis = round(devis_envoyes / total_appeles * 100, 1) if total_appeles else 0.0
+        # Close rate réel sur les devis tranchés (gagné vs rejeté), tous
+        # listes confondues — répond à "quel % de mes devis j'arrive à closer".
+        taux_closing_devis = round(closes / (closes + devis_rejetes) * 100, 1) if (closes + devis_rejetes) else 0.0
 
         return {
             "total_appeles": total_appeles,
             "devis_envoyes": devis_envoyes,
+            "devis_rejetes": devis_rejetes,
             "taux_devis": taux_devis,
+            "taux_closing_devis": taux_closing_devis,
             "ca_potentiel": round(ca_potentiel, 2),
         }
 

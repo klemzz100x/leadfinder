@@ -51,7 +51,7 @@ export default function DevisRelanceView() {
         : x))
       return
     }
-    const status = choix === 'approuve' ? 'closing' : 'pas_interesse'
+    const status = choix === 'approuve' ? 'closing' : 'devis_rejete'
     await patchListLead(d.list_id, d.id, { status, devis_envoye: false })
     setDevis((prev) => prev.filter((x) => !(x.id === d.id && x.list_id === d.list_id)))
   }
