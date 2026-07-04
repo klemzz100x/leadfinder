@@ -1,9 +1,11 @@
 import { useState, useEffect } from 'react'
 import LeadRow from './LeadRow.jsx'
 import AddToListBtn from './AddToListBtn.jsx'
+import SendPreviewModal from './SendPreviewModal.jsx'
 
 export default function LeadList({ leads, onUpdate, lists, onListsChange, creneauxMap }) {
   const [selected, setSelected] = useState(() => new Set())
+  const [showSendModal, setShowSendModal] = useState(false)
 
   // Clé stable basée sur l'ensemble des ids affichés, pas sur la référence du
   // tableau `leads` : App.jsx recrée ce tableau (via .map()) à chaque mise à
@@ -33,6 +35,8 @@ export default function LeadList({ leads, onUpdate, lists, onListsChange, crenea
   }
 
   const selectedIds = Array.from(selected)
+  const selectedLeads = leads.filter((l) => selected.has(l.id))
+  const missingEmailCount = selectedLeads.filter((l) => !l.email_client?.trim()).length
 
   return (
     <div className="lead-list">
@@ -62,9 +66,26 @@ export default function LeadList({ leads, onUpdate, lists, onListsChange, crenea
                 setSelected(new Set())
               }}
             />
+            <button
+              className="btn btn-sm lead-bulk-send-btn"
+              onClick={() => setShowSendModal(true)}
+              title={missingEmailCount > 0
+                ? `${missingEmailCount} lead(s) sélectionné(s) sans email client renseigné — seront ignorés`
+                : 'Générer site + devis et prévisualiser l\'email'}
+            >
+              ✉️ Envoyer{missingEmailCount > 0 ? ` (${selectedIds.length - missingEmailCount}/${selectedIds.length})` : ''}
+            </button>
           </div>
         )}
       </div>
+
+      {showSendModal && (
+        <SendPreviewModal
+          leadIds={selectedIds.filter((id) => leads.find((l) => l.id === id)?.email_client?.trim())}
+          onClose={() => setShowSendModal(false)}
+          onSent={() => { setShowSendModal(false); setSelected(new Set()) }}
+        />
+      )}
 
       {leads.map((lead) => (
         <LeadRow

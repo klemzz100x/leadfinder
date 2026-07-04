@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import logging
 from contextlib import asynccontextmanager
+from dataclasses import asdict
 from pathlib import Path
 from typing import Optional
 
@@ -24,6 +25,7 @@ from .creneaux import load_familles, save_familles, types_to_creneau
 from .departements import DEPARTEMENT_CENTROIDS, DEPARTEMENTS
 from .pipeline import ScanSummary, scan_city, scan_departement
 from .pricing import suggest_price
+from .send_orchestrator import SendResult, process_batch
 from .sources.osm import USER_AGENT
 from .store import LeadStore
 
@@ -91,6 +93,13 @@ class PatchLeadRequest(BaseModel):
     called: Optional[bool] = None
     outcome: Optional[str] = None
     notes: Optional[str] = None
+    email_client: Optional[str] = None
+    page_facebook: Optional[str] = None
+
+
+class SendLeadsRequest(BaseModel):
+    lead_ids: list[str]
+    preview: bool = True
 
 
 class CategoryDef(BaseModel):
@@ -302,10 +311,23 @@ async def patch_lead(lead_id: str, data: PatchLeadRequest) -> dict:
         called=data.called,
         outcome=data.outcome,
         notes=data.notes,
+        email_client=data.email_client,
+        page_facebook=data.page_facebook,
     )
     if not updated:
         raise HTTPException(404, f"Lead {lead_id!r} introuvable")
     return {"ok": True}
+
+
+@app.post("/api/leads/send")
+async def send_leads(data: SendLeadsRequest) -> list[dict]:
+    """Chaîne complète par lead sélectionné : génération du site, devis,
+    email. `preview=true` (défaut) compose tout sans jamais envoyer l'email
+    réellement — garde-fou explicite avant tout envoi à un vrai prospect."""
+    if not data.lead_ids:
+        raise HTTPException(400, "Aucun lead sélectionné")
+    results: list[SendResult] = await process_batch(data.lead_ids, data.preview, store)
+    return [asdict(r) for r in results]
 
 
 @app.get("/api/export")

@@ -241,6 +241,16 @@ export async function fetchPerformance(period) {
   return res.json()
 }
 
+export async function sendLeads(leadIds, preview = true) {
+  const res = await fetch(`${BASE}/leads/send`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ lead_ids: leadIds, preview }),
+  })
+  if (!res.ok) throw new Error(await res.text())
+  return res.json()
+}
+
 export async function patchListLead(listId, leadId, data) {
   const res = await fetch(`${BASE}/lists/${encodeURIComponent(listId)}/leads/${encodeURIComponent(leadId)}`, {
     method: 'PATCH',

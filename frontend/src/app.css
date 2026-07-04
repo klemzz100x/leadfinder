@@ -371,6 +371,53 @@ main { flex: 1; }
   font-weight: 600;
   color: var(--accent);
 }
+.lead-bulk-send-btn {
+  background: var(--green);
+  color: #fff;
+  border: none;
+}
+.lead-bulk-send-btn:hover { filter: brightness(1.08); }
+
+/* ── Aperçu avant envoi (SendPreviewModal) ── */
+.btn-primary {
+  background: var(--green);
+  color: #fff;
+  border: none;
+  padding: 0.5rem 1rem;
+  font-weight: 600;
+}
+.btn-primary:hover { filter: brightness(1.08); }
+.btn-primary:disabled { opacity: 0.45; cursor: not-allowed; filter: none; }
+
+.send-preview-panel { max-width: 720px; width: 100%; }
+.send-preview-hint { color: var(--muted); font-size: 0.9rem; }
+.send-preview-error { color: var(--chaud); font-size: 0.85rem; margin: 0.3rem 0; }
+
+.send-preview-card {
+  border: 1px solid var(--surface2);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  margin-bottom: 0.7rem;
+}
+.send-preview-card-error { border-color: var(--chaud); background: rgba(239, 68, 68, 0.06); }
+.send-preview-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+}
+.send-preview-ok { color: var(--green); font-size: 0.85rem; font-weight: 600; }
+.send-preview-ko { color: var(--chaud); font-size: 0.85rem; font-weight: 600; }
+.send-preview-links { font-size: 0.85rem; color: var(--muted); margin: 0.25rem 0; }
+.send-preview-links a { color: var(--accent); }
+.send-preview-email-frame {
+  width: 100%;
+  height: 420px;
+  border: 1px solid var(--surface2);
+  border-radius: 8px;
+  margin-top: 0.5rem;
+  background: #fff;
+}
 
 .lead-select-checkbox {
   display: block;
@@ -788,6 +835,19 @@ main { flex: 1; }
 }
 .lead-notes-panel textarea:focus { outline: none; border-color: var(--accent); }
 
+.lead-contact-input {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.45rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid var(--surface2);
+  background: var(--bg);
+  color: var(--text);
+  font-size: 0.85rem;
+  font-family: inherit;
+}
+.lead-contact-input:focus { outline: none; border-color: var(--accent); }
+
 /* ── Category view ── */
 .category-view {
   padding: 0.75rem 1rem;
@@ -1146,10 +1206,29 @@ main { flex: 1; }
   box-shadow: var(--shadow);
 }
 .rappel-main { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; flex: 1; }
+.rappel-name-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
 .rappel-name { font-weight: 700; font-size: 0.95rem; }
+.rappel-devis-date {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.1rem 0.55rem;
+  border-radius: 99px;
+  white-space: nowrap;
+}
+.rappel-devis-date-recent { background: #22c55e22; color: #16a34a; }
+.rappel-devis-date-attention { background: #f59e0b22; color: #b45309; }
+.rappel-devis-date-urgent { background: #ef444422; color: #b91c1c; }
 .rappel-meta { font-size: 0.8rem; color: var(--muted); }
 .rappel-notes { font-size: 0.8rem; color: var(--text); font-style: italic; }
 .rappel-actions { display: flex; align-items: center; gap: 0.5rem; flex-shrink: 0; }
+.rappel-statut-select {
+  font-size: 0.8rem;
+  padding: 0.3rem 0.5rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--surface2);
+  background: var(--bg);
+  color: var(--text);
+}
 .rappel-status-select {
   font-size: 0.8rem;
   padding: 0.3rem 0.5rem;

@@ -9,6 +9,20 @@ function joursDepuis(iso) {
   return `Envoyé il y a ${jours} jours`
 }
 
+// Urgence de relance croissante avec l'ancienneté — cadence habituelle d'un
+// devis (relance sous 1-2 semaines) : vert = envoyé récemment, orange = à
+// relancer bientôt, rouge = en attente depuis longtemps, prioritaire.
+function urgenceRelance(iso) {
+  const jours = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000)
+  if (jours >= 14) return 'urgent'
+  if (jours >= 7) return 'attention'
+  return 'recent'
+}
+
+function dateFr(iso) {
+  return new Date(iso).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })
+}
+
 export default function DevisRelanceView() {
   const [devis, setDevis] = useState([])
   const [loading, setLoading] = useState(true)
@@ -26,11 +40,20 @@ export default function DevisRelanceView() {
     return () => clearInterval(id)
   }, [load])
 
-  const handleRelance = async (d) => {
-    await patchListLead(d.list_id, d.id, { devis_envoye: true })
-    setDevis((prev) => prev.map((x) => (x.id === d.id && x.list_id === d.list_id)
-      ? { ...x, devis_envoye_le: new Date().toISOString() }
-      : x))
+  // "Négociation" relance simplement la date (reste dans la todo-list) ;
+  // "Approuvé"/"Rejeté" posent le statut pipeline correspondant et effacent
+  // devis_envoye_le (sort de la todo-list, devenue sans objet une fois l'issue connue).
+  const handleStatutDevis = async (d, choix) => {
+    if (choix === 'negociation') {
+      await patchListLead(d.list_id, d.id, { status: 'devis_relance', devis_envoye: true })
+      setDevis((prev) => prev.map((x) => (x.id === d.id && x.list_id === d.list_id)
+        ? { ...x, status: 'devis_relance', devis_envoye_le: new Date().toISOString() }
+        : x))
+      return
+    }
+    const status = choix === 'approuve' ? 'closing' : 'pas_interesse'
+    await patchListLead(d.list_id, d.id, { status, devis_envoye: false })
+    setDevis((prev) => prev.filter((x) => !(x.id === d.id && x.list_id === d.list_id)))
   }
 
   const handleRetirer = async (d) => {
@@ -54,11 +77,18 @@ export default function DevisRelanceView() {
         {devis.map((d) => (
           <div key={`${d.list_id}-${d.id}`} className="rappel-card">
             <div className="rappel-main">
-              <span className="rappel-name">{d.name}</span>
+              <div className="rappel-name-row">
+                <span className="rappel-name">{d.name}</span>
+                <span
+                  className={`rappel-devis-date rappel-devis-date-${urgenceRelance(d.devis_envoye_le)}`}
+                  title={`Devis envoyé le ${dateFr(d.devis_envoye_le)}`}
+                >
+                  📅 {dateFr(d.devis_envoye_le)} · {joursDepuis(d.devis_envoye_le)}
+                </span>
+              </div>
               <span className="rappel-meta">
                 {d.business_type}{d.city ? ` · ${d.city}` : ''} · dans « {d.list_name} »
                 {d.assigned_to ? ` · ${d.assigned_to}` : ''}
-                {' · '}{joursDepuis(d.devis_envoye_le)}
                 {d.budget_propose ? ` · ${Math.round(d.budget_propose).toLocaleString('fr-FR')} €` : ''}
               </span>
               {d.list_notes && <span className="rappel-notes">{d.list_notes}</span>}
@@ -77,13 +107,17 @@ export default function DevisRelanceView() {
               >
                 📍
               </a>
-              <button
-                className="btn btn-sm"
-                onClick={() => handleRelance(d)}
-                title="Remet la date de relance à aujourd'hui"
+              <select
+                className="rappel-statut-select"
+                defaultValue=""
+                onChange={(e) => { const v = e.target.value; e.target.value = ''; handleStatutDevis(d, v) }}
+                title="Enregistrer le statut du devis"
               >
-                🔁 Relancé aujourd'hui
-              </button>
+                <option value="" disabled>Statut du devis…</option>
+                <option value="negociation">🔄 Négociation (relancé aujourd'hui)</option>
+                <option value="approuve">✅ Approuvé</option>
+                <option value="rejete">❌ Rejeté</option>
+              </select>
               <button
                 className="btn btn-sm btn-cancel"
                 onClick={() => handleRetirer(d)}

@@ -1,0 +1,9 @@
+**/node_modules
+**/dist
+**/.astro
+site-web/sites-generes
+site-web/devis/generes
+site-web/.playwright-mcp
+.git
+.env
+frontend/node_modules

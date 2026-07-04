@@ -46,6 +46,19 @@
     { "nom": "Prestation à remplacer 3", "prix": "XX €", "duree": "1h" },
     { "nom": "Prestation à remplacer 4", "prix": "XX €", "duree": "1h30" }
   ],
+  "responsable": {
+    "nom": null,
+    "photo": null,
+    "histoire": "Histoire à remplacer — présentez la personne derrière l'établissement : son parcours, ce qui l'anime, depuis quand elle exerce ce métier."
+  },
+  "catalogue": [
+    { "nom": "Produit 1", "prix": "Prix 1", "image": null },
+    { "nom": "Produit 2", "prix": "Prix 2", "image": null },
+    { "nom": "Produit 3", "prix": "Prix 3", "image": null },
+    { "nom": "Produit 4", "prix": "Prix 4", "image": null },
+    { "nom": "Produit 5", "prix": "Prix 5", "image": null },
+    { "nom": "Produit 6", "prix": "Prix 6", "image": null }
+  ],
   "reservation": {
     "activee": true,
     "calLink": "votre-compte-calcom/votre-evenement",

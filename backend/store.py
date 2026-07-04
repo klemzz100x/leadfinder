@@ -105,6 +105,16 @@ _ALTER_STATEMENTS = [
     # nul — cf. backend/pricing.py pour l'utilisation).
     "ALTER TABLE leads ADD COLUMN IF NOT EXISTS gmaps_rating REAL",
     "ALTER TABLE leads ADD COLUMN IF NOT EXISTS gmaps_user_ratings_total INTEGER",
+    # ── Phase 8 : génération + envoi automatisé (site + devis + email) ──────
+    # email_client/page_facebook sont des propriétés de l'établissement
+    # (pas de sa relation à une liste précise) — même raisonnement que le
+    # statut en Phase 5 : posées sur `leads`, jamais sur `list_leads`.
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS email_client TEXT",
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS page_facebook TEXT",
+    # Cache des horaires Google Places (JSON), récupérés au moment de l'envoi
+    # automatisé — jamais interrogés au scan initial (coût inutile pour des
+    # leads qui ne seront peut-être jamais envoyés).
+    "ALTER TABLE leads ADD COLUMN IF NOT EXISTS opening_hours_json TEXT",
 ]
 
 # Historique des scans (ville ou département) — évite qu'un scan déjà fait
@@ -553,6 +563,8 @@ class LeadStore:
         notes: Optional[str] = None,
         audit_json: Optional[str] = None,
         web_status: Optional[str] = None,
+        email_client: Optional[str] = None,
+        page_facebook: Optional[str] = None,
     ) -> bool:
         sets: list[str] = []
         values: list[Any] = []
@@ -571,6 +583,12 @@ class LeadStore:
         if web_status is not None:
             values.append(web_status)
             sets.append(f"web_status = ${len(values)}")
+        if email_client is not None:
+            values.append(email_client)
+            sets.append(f"email_client = ${len(values)}")
+        if page_facebook is not None:
+            values.append(page_facebook)
+            sets.append(f"page_facebook = ${len(values)}")
         if not sets:
             return False
         values.append(lead_id)
@@ -578,6 +596,13 @@ class LeadStore:
             f"UPDATE leads SET {', '.join(sets)} WHERE id = ${len(values)}", *values
         )
         return _affected(status) > 0
+
+    async def mark_devis_envoye(self, lead_id: str) -> None:
+        """Marque le devis comme réellement envoyé (Phase 8 : envoi
+        automatisé) — indépendant d'une liste précise, contrairement à
+        `patch_list_lead(devis_envoye=...)` qui nécessite un `list_id`."""
+        now = datetime.now(timezone.utc).isoformat()
+        await self.pool.execute("UPDATE leads SET devis_envoye_le = $1 WHERE id = $2", now, lead_id)
 
     async def export_csv(self, city: Optional[str] = None) -> str:
         leads = await self.get_leads(city=city)

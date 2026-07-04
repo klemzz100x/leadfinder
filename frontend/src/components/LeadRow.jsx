@@ -33,6 +33,8 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
   const [saving, setSaving]       = useState(false)
   const [showNotes, setShowNotes] = useState(false)
   const [notes, setNotes]         = useState(lead.notes || '')
+  const [emailClient, setEmailClient]   = useState(lead.email_client || '')
+  const [pageFacebook, setPageFacebook] = useState(lead.page_facebook || '')
 
   const toggleCalled = async () => {
     const next = !called
@@ -47,9 +49,9 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
   }
 
   const saveNotes = async () => {
-    await patchLead(lead.id, { notes })
+    await patchLead(lead.id, { notes, email_client: emailClient, page_facebook: pageFacebook })
     setShowNotes(false)
-    onUpdate({ id: lead.id, notes })
+    onUpdate({ id: lead.id, notes, email_client: emailClient, page_facebook: pageFacebook })
   }
 
   const scorePercent = Math.min(Math.max(lead.score, 0), 1) * 100
@@ -174,9 +176,9 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
           <button
             className="btn-notes"
             onClick={() => setShowNotes(v => !v)}
-            title="Notes"
+            title="Notes et contact (email, page Facebook)"
           >
-            {lead.notes?.trim() && <span className="btn-notes-badge">1</span>}
+            {(lead.notes?.trim() || lead.email_client?.trim()) && <span className="btn-notes-badge">1</span>}
             📝
           </button>
           <a
@@ -206,6 +208,20 @@ export default function LeadRow({ lead, onUpdate, lists, onListsChange, selected
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Notes sur cet appel…"
             rows={2}
+          />
+          <input
+            type="email"
+            className="lead-contact-input"
+            value={emailClient}
+            onChange={(e) => setEmailClient(e.target.value)}
+            placeholder="Email du client (pour l'envoi automatisé du site + devis)"
+          />
+          <input
+            type="text"
+            className="lead-contact-input"
+            value={pageFacebook}
+            onChange={(e) => setPageFacebook(e.target.value)}
+            placeholder="Page Facebook (optionnel)"
           />
           <button className="btn btn-sm" onClick={saveNotes}>Enregistrer</button>
           <button className="btn btn-sm btn-cancel" onClick={() => setShowNotes(false)}>Annuler</button>

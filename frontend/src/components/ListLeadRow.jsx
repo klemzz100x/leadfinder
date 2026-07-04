@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { googleMapsUrl } from '../utils.js'
 import { CONTACT_STATUS_COLOR } from '../statusColors.js'
 import { USERS } from '../identity.js'
+import { patchLead } from '../api.js'
 import CreneauButton from './CreneauButton.jsx'
 
 export const STATUSES = [
@@ -24,6 +25,11 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
   const [saving, setSaving] = useState(false)
   const [budgetPropose, setBudgetPropose] = useState(lead.budget_propose ?? '')
   const [budgetFinal, setBudgetFinal] = useState(lead.budget_final ?? '')
+  // email_client/page_facebook sont des propriétés du LEAD, pas de la liste
+  // (contrairement à `notes` ci-dessus) — patchLead direct plutôt que le
+  // callback onNotesChange qui passe par patchListLead (list_leads.notes).
+  const [emailClient, setEmailClient]   = useState(lead.email_client || '')
+  const [pageFacebook, setPageFacebook] = useState(lead.page_facebook || '')
 
   const meta = STATUS_MAP[lead.list_status] || STATUSES[0]
   const group = getGroup(lead.list_status)
@@ -44,6 +50,7 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
 
   const handleSaveNotes = async () => {
     await onNotesChange(notes)
+    await patchLead(lead.id, { email_client: emailClient, page_facebook: pageFacebook })
     setShowNotes(false)
   }
 
@@ -143,9 +150,9 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
           <button
             className={`btn-notes${showNotes ? ' active' : ''}`}
             onClick={() => setShowNotes(v => !v)}
-            title="Notes"
+            title="Notes et contact (email, page Facebook)"
           >
-            {lead.list_notes?.trim() && <span className="btn-notes-badge">1</span>}
+            {(lead.list_notes?.trim() || lead.email_client?.trim()) && <span className="btn-notes-badge">1</span>}
             📝
           </button>
           <a
@@ -167,6 +174,20 @@ export default function ListLeadRow({ lead, onStatusChange, onRemove, onNotesCha
             onChange={e => setNotes(e.target.value)}
             rows={2}
             placeholder="Notes sur ce prospect…"
+          />
+          <input
+            type="email"
+            className="lead-contact-input"
+            value={emailClient}
+            onChange={(e) => setEmailClient(e.target.value)}
+            placeholder="Email du client (pour l'envoi automatisé du site + devis)"
+          />
+          <input
+            type="text"
+            className="lead-contact-input"
+            value={pageFacebook}
+            onChange={(e) => setPageFacebook(e.target.value)}
+            placeholder="Page Facebook (optionnel)"
           />
           <div className="llr-notes-actions">
             <button className="btn btn-sm" onClick={handleSaveNotes}>Enregistrer</button>

@@ -1,5 +1,8 @@
 ---
 import siteConfig from '../data/site.config.json';
+import ImagePlaceholder from './ImagePlaceholder.astro';
+
+const responsable = siteConfig.responsable;
 ---
 
 <section class="reveal max-w-4xl mx-auto px-6 py-20 text-center">
@@ -11,3 +14,22 @@ import siteConfig from '../data/site.config.json';
     {siteConfig.description}
   </p>
 </section>
+
+{responsable?.nom && (
+  <section class="reveal max-w-3xl mx-auto px-6 pb-20 flex flex-col sm:flex-row items-center gap-8 text-center sm:text-left">
+    {responsable.photo ? (
+      <img
+        src={responsable.photo}
+        alt={responsable.nom}
+        class="w-32 h-32 rounded-full object-cover shrink-0 shadow-md"
+      />
+    ) : (
+      <ImagePlaceholder label="Photo à remplacer" class="w-32 h-32 rounded-full shrink-0" />
+    )}
+    <div>
+      <span class="text-rose-600 font-semibold uppercase tracking-widest text-xs">La personne derrière {siteConfig.nom}</span>
+      <p class="mt-1 font-serif text-xl font-semibold text-stone-900">{responsable.nom}</p>
+      <p class="mt-3 text-stone-600 leading-relaxed">{responsable.histoire}</p>
+    </div>
+  </section>
+)}

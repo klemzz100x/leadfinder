@@ -21,6 +21,13 @@ class Settings(BaseSettings):
     GOOGLE_PLACES_API_KEY: str = ""  # Google Places API New (optionnel, bridé)
     BRAVE_API_KEY: str = ""          # Brave Search (optionnel)
 
+    # Phase 8 : génération + envoi automatisé (site + devis + email).
+    ANTHROPIC_API_KEY: str = ""      # Claude API — rédaction du contenu des sites
+    CLOUDFLARE_API_TOKEN: str = ""   # Déploiement Cloudflare Pages headless
+    CLOUDFLARE_ACCOUNT_ID: str = ""
+    GMAIL_ADDRESS: str = ""          # Envoi email (SMTP + mot de passe d'application)
+    GMAIL_APP_PASSWORD: str = ""
+
     @property
     def has_psi(self) -> bool:
         return bool(self.PSI_API_KEY)
@@ -32,6 +39,18 @@ class Settings(BaseSettings):
     @property
     def has_brave(self) -> bool:
         return bool(self.BRAVE_API_KEY)
+
+    @property
+    def has_anthropic(self) -> bool:
+        return bool(self.ANTHROPIC_API_KEY)
+
+    @property
+    def has_cloudflare(self) -> bool:
+        return bool(self.CLOUDFLARE_API_TOKEN and self.CLOUDFLARE_ACCOUNT_ID)
+
+    @property
+    def has_gmail(self) -> bool:
+        return bool(self.GMAIL_ADDRESS and self.GMAIL_APP_PASSWORD)
 
 
 settings = Settings()

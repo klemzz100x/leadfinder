@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+</head>
+<body style="margin:0;padding:0;background:#f5f4f2;font-family:Georgia,'Times New Roman',serif;color:#292524;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f4f2;padding:32px 0;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="background:#ffffff;border-radius:12px;overflow:hidden;">
+          <tr>
+            <td style="padding:32px 40px 8px 40px;">
+              <p style="margin:0 0 24px 0;font-size:15px;line-height:1.6;">Bonjour,</p>
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
+                J'espère que vous allez bien.
+              </p>
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
+                Comme convenu, j'ai le plaisir de vous transmettre la maquette du site de
+                <strong>{{NOM_ETABLISSEMENT}}</strong>, désormais hébergée et consultable directement en ligne :
+              </p>
+              <p style="margin:0 0 24px 0;text-align:center;">
+                <a href="{{SITE_URL}}" style="display:inline-block;background:#78716c;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:999px;font-size:14px;font-weight:600;">
+                  Voir le site
+                </a>
+              </p>
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
+                Vous trouverez également ci-joint le devis correspondant — {{DEVIS_NUMERO}}, valable 1 mois.
+              </p>
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
+                Je tenais à préciser un point important : cette version n'est pas figée. C'est une base de
+                travail, et l'objectif est justement d'y apporter tous les ajustements nécessaires pour
+                qu'elle corresponde exactement à ce que vous avez en tête — que ce soit sur les textes, les
+                couleurs, la mise en page ou les images. Rien n'est bloqué, tout peut être modifié.
+              </p>
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
+                C'est d'ailleurs ce qui est inclus dans la maintenance que vous voyez sur le devis : il s'agit
+                d'un accompagnement continu, sans limite de nombre de demandes. Concrètement, si vous souhaitez
+                changer une image, reformuler un texte, ajouter une section ou ajuster quoi que ce soit
+                d'autre, il vous suffit de me le signaler et je m'en occupe. L'idée est de construire une
+                vraie collaboration dans la durée, pas une simple prestation ponctuelle.
+              </p>
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
+                N'hésitez pas à parcourir le site et à me faire part de vos retours, remarques ou envies de
+                modifications — aussi nombreux soient-ils. Je reste à votre disposition pour en discuter par
+                téléphone si vous préférez.
+              </p>
+              <p style="margin:0 0 16px 0;font-size:15px;line-height:1.6;">
+                Dans l'attente de votre retour,
+              </p>
+              <p style="margin:24px 0 0 0;font-size:15px;line-height:1.6;">
+                Bien cordialement,<br>
+                {{EMETTEUR_NOM}}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:20px 40px;background:#f5f4f2;font-size:12px;color:#78716c;">
+              {{EMETTEUR_NOM}} — {{EMETTEUR_EMAIL}}
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>

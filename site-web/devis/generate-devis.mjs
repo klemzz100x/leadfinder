@@ -139,7 +139,6 @@ export async function generateDevis({ name, address, siret, numero, total }) {
   await page.pdf({ path: outPath, format: 'A4', printBackground: true });
   await browser.close();
 
-  console.log(`✔ ${numeroLabel} — ${name} → site-web/devis/generes/${fichier}`);
   return { numero: numeroLabel, fichier: outPath };
 }
 
@@ -147,11 +146,19 @@ export async function generateDevis({ name, address, siret, numero, total }) {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const args = parseArgs(process.argv.slice(2));
   if (!args.name || !args.address) {
-    console.error('Usage : node generate-devis.mjs --name "Nom entreprise" --address "Adresse complète" [--siret "..."] [--numero N] [--total N]');
+    console.error('Usage : node generate-devis.mjs --name "Nom entreprise" --address "Adresse complète" [--siret "..."] [--numero N] [--total N] [--json]');
     process.exit(1);
   }
-  generateDevis({ name: args.name, address: args.address, siret: args.siret, numero: args.numero, total: args.total }).catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+  generateDevis({ name: args.name, address: args.address, siret: args.siret, numero: args.numero, total: args.total })
+    .then((result) => {
+      if (args.json) {
+        console.log(JSON.stringify(result));
+      } else {
+        console.log(`✔ ${result.numero} — ${args.name} → site-web/devis/generes/${path.basename(result.fichier)}`);
+      }
+    })
+    .catch((err) => {
+      console.error(err);
+      process.exit(1);
+    });
 }
